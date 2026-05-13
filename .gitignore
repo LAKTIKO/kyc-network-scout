@@ -26,3 +26,5 @@ data/normalized/*
 # OpenSanctions dataset
 *.json.gz
 opensanctions/
+.env.save
+.env.*
