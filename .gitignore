@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Environment (секретні ключі — НІКОЛИ не комітимо)
+.env
+.env.local
+
+# Data (сирі дані скрейпера не пушимо в git)
+data/raw/*
+data/normalized/*
+!data/raw/.gitkeep
+!data/normalized/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Docker
+*.log
+
+# OpenSanctions dataset
+*.json.gz
+opensanctions/
