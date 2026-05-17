@@ -1,0 +1,44 @@
+┌──────────────────────────────────────────────────────────┐
+│                  KYC Network Scout Phase 1                │
+└──────────────────────────────────────────────────────────┘
+
+   User (CLI / docker compose exec)
+            │
+            ▼
+   ┌──────────────────┐
+   │  search_task     │ ◄── Celery task in queue
+   │  (worker-search) │
+   └────────┬─────────┘
+            │
+            │ generates 30 queries (UA/RU/EN with RF/BY focus)
+            │ sends to Serper API → returns ~50 URLs
+            │
+            │ for each unique URL → apply_async()
+            ▼
+   ┌─────────────────────────────────────┐
+   │  Redis Queue (broker)               │
+   │  ╔═══════════════════════════════╗  │
+   │  ║ scrape_and_classify_task * N  ║  │
+   │  ╚═══════════════════════════════╝  │
+   └──────────┬──────────────────────────┘
+              │
+              ▼
+   ┌─────────────────────┐
+   │ scrape_and_classify │ ◄── workers process in parallel
+   │ (worker-scraper)    │      (concurrency=1, scraper-heavy)
+   └────────┬────────────┘
+            │
+            │ 1. Crawl4AI + Playwright → markdown
+            │ 2. Anthropic Claude Sonnet 4.6 → structured JSON
+            │ 3. Save to data/normalized/{slug}/{hash}.json
+            ▼
+   ┌─────────────────────────────────────┐
+   │ Output: data/normalized/{slug}/     │
+   │  • {hash}.json (verdict)            │
+   │  • severity, category, summary      │
+   │  • match_evidence, key_quotes       │
+   └─────────────────────────────────────┘
+
+   ┌───────────────┐
+   │ Beat Scheduler│ → heartbeat every 10 minutes (demo)
+   └───────────────┘

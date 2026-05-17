@@ -3,3 +3,5 @@ requests>=2.31
 python-dotenv>=1.0
 crawl4ai
 anthropic
+celery>=5.4
+redis>=5.0

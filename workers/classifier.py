@@ -131,7 +131,7 @@ def classify(
         return result
 
     try:
-        client = anthropic.Anthropic()
+        client = anthropic.Anthropic(max_retries=5)
         user_message = _build_user_message(article, person_name, identifying_hints)
 
         response = client.messages.create(
@@ -166,8 +166,6 @@ def classify(
             }
         )
 
-    except anthropic.RateLimitError:
-        result["error"] = "Rate limit exceeded, retry later"
     except anthropic.AuthenticationError:
         result["error"] = "Invalid ANTHROPIC_API_KEY"
     except (anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
