@@ -32,7 +32,7 @@ _OUTPUT_BASE = Path(os.getenv("OUTPUT_DIR", "data"))
 # Критичні типи factors (HIGH-ризик за KYC-логікою, RF/BY-фокус).
 _CRITICAL_FACTOR_TYPES = {
     "ruFounders", "byFounders", "irFounders",
-    "sanction", "nbuSanctions", "amcu",   # санкції РНБО / НБУ / АМКУ
+    "sanction",   # справжні санкції (РНБО/OFAC/ЄС); НБУ/АМКУ → regulatory
     "bankruptcy", "warTerritory",
 }
 _PEP_FACTOR_TYPES = {"declarantOwner", "publicOfficial"}
@@ -155,9 +155,17 @@ def _sanction_detail(f: dict[str, Any]) -> dict[str, Any]:
 def _risk_signals(factors: list[dict[str, Any]]) -> dict[str, Any]:
     """data.factors → структуровані ризик-сигнали для скорингу.
 
-    Толерантно до неуніфікованої схеми: усе через .get(), indicator чиститься
-    від U+FE0F, declarantOwner обробляється окремо (немає text/indicator)."""
+    Розрізняє:
+      • critical    — справжні санкції (sanction: РНБО/OFAC/ЄС) та інші
+                      блокуючі сигнали (ruFounders/byFounders/bankruptcy/...).
+      • regulatory  — наглядові стягнення НБУ/АМКУ (nbuSanctions, amcu): це
+                      адміністративні штрафи/застереження, а НЕ санкційний
+                      список. Юридично це регуляторна історія, не санкція —
+                      релевантна для KYC, але не блокуюча.
+      • pep / warnings — як раніше.
+    """
     critical: list[dict[str, Any]] = []
+    regulatory: list[dict[str, Any]] = []
     pep: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
 
@@ -168,9 +176,13 @@ def _risk_signals(factors: list[dict[str, Any]]) -> dict[str, Any]:
         indicator = _clean(f.get("indicator"))
         text = f.get("text") or f.get("sanctionComment") or f.get("sanctionList")
 
-        if ftype in _CRITICAL_FACTOR_TYPES:
+        if ftype in ("nbuSanctions", "amcu"):
             entry = {"type": ftype, "text": text}
-            if ftype in ("sanction", "nbuSanctions"):
+            entry.update(_sanction_detail(f))
+            regulatory.append(entry)
+        elif ftype in _CRITICAL_FACTOR_TYPES:
+            entry = {"type": ftype, "text": text}
+            if ftype == "sanction":
                 entry.update(_sanction_detail(f))
             critical.append(entry)
         elif ftype in _PEP_FACTOR_TYPES:
@@ -185,6 +197,7 @@ def _risk_signals(factors: list[dict[str, Any]]) -> dict[str, Any]:
 
     return {
         "critical": critical,
+        "regulatory": regulatory,
         "pep": pep,
         "warnings": warnings,
         "raw_count": len(factors),
