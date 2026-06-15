@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System dependencies needed by Playwright/Chromium
+# System dependencies: Playwright/Chromium + WeasyPrint (PDF-рендеринг)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
@@ -17,11 +17,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libatk-bridge2.0-0 \
     libgbm1 \
     libgtk-3-0 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    fonts-dejavu \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Dependency layer (cached unless requirements.txt changes) ──────────────
+# --timeout/--retries: crawl4ai тягне важкі колеса (torch тощо); на повільному
+# з'єднанні дефолтний pip падає на ReadTimeoutError з files.pythonhosted.org.
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --timeout 120 --retries 10 -r requirements.txt
 
 # Playwright installs Chromium to PLAYWRIGHT_BROWSERS_PATH=/ms-playwright;
 # --with-deps runs its own apt-get update internally for browser-specific libs.
