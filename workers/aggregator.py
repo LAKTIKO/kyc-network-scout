@@ -148,7 +148,15 @@ def _build_graph(slug, registry, resolved, report_dir):
         net.from_nx(G)
         net.set_options('{"physics":{"barnesHut":{"gravitationalConstant":-8000}}}')
         gf = report_dir / "graph.html"
-        net.save_graph(str(gf))
+        # pyvis пише vis-network lib/ ВІДНОСНО cwd (за замовч. /app, куди
+        # appuser не має прав запису → Permission denied). Тимчасово
+        # переходимо в report_dir, де права є, і зберігаємо локальним ім'ям.
+        prev_cwd = os.getcwd()
+        try:
+            os.chdir(report_dir)
+            net.save_graph("graph.html")
+        finally:
+            os.chdir(prev_cwd)
         return gf.name
     except Exception as exc:
         logger.warning("graph build failed: %s", exc)
