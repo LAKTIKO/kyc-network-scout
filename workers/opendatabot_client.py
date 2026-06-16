@@ -48,6 +48,7 @@ def _request(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         "url": safe_url,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "data": None,
+        "not_found": False,
         "error": None,
     }
 
@@ -62,6 +63,14 @@ def _request(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
                 envelope["data"] = resp.json()
                 return envelope
 
+            # 404 — субʼєкта НЕМАЄ в реєстрі (не помилка, а факт відсутності).
+            # Для KYC це принципово відрізняється від збою API: неіснуючий
+            # код — це red flag (фейк/шелл/одруківка), а не "повтори пізніше".
+            if resp.status_code == 404:
+                envelope["not_found"] = True
+                return envelope
+
+            # Інші 4xx (крім 429) — не ретраїмо, це наша помилка (ключ/запит).
             if 400 <= resp.status_code < 500 and resp.status_code != 429:
                 envelope["error"] = f"HTTP {resp.status_code}: {resp.text[:200]}"
                 return envelope

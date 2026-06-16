@@ -99,6 +99,8 @@ def _source_coverage(registry: dict[str, Any] | None,
 
     if registry is None:
         cov["registry"] = "skipped"
+    elif registry.get("not_found"):
+        cov["registry"] = "not_found"
     elif registry.get("error"):
         cov["registry"] = "error"
     elif not registry.get("raw_available"):

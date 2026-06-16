@@ -229,6 +229,7 @@ def _normalize_company(edrpou: str, envelope: dict[str, Any]) -> dict[str, Any]:
         "beneficiaries": _beneficiaries(reg),
         "risk_signals": _risk_signals(factors),
         "error": envelope.get("error"),
+        "not_found": envelope.get("not_found", False),
         "raw_available": bool(reg),
     }
 
