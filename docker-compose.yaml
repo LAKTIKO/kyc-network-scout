@@ -27,6 +27,7 @@ services:
       REDIS_URL: redis://redis:6379/0
     volumes:
       - ./data:/app/data
+      - ./output:/app/output
     depends_on:
       redis:
         condition: service_healthy
@@ -47,6 +48,7 @@ services:
       REDIS_URL: redis://redis:6379/0
     volumes:
       - ./data:/app/data
+      - ./output:/app/output
     depends_on:
       redis:
         condition: service_healthy
@@ -67,6 +69,22 @@ services:
     networks:
       - kyc-network
     restart: unless-stopped
+
+  # One-off оркестратор. НЕ стартує з `compose up` (profile=tools).
+  # Запуск: docker compose run --rm kyc 14360570
+  #         docker compose run --rm kyc 1234567890 --person --name "Шевченко О. В."
+  kyc:
+    build: .
+    profiles: ["tools"]
+    entrypoint: ["python", "-m", "workers.run_kyc"]
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+    networks:
+      - kyc-network
 
 networks:
   kyc-network:
