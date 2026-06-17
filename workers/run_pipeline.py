@@ -202,6 +202,95 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def run_adverse_media(
+    subject_name: str,
+    slug: str,
+    max_queries: int = 5,
+    max_urls: int = 5,
+    output_dir: str = "data",
+) -> dict[str, Any]:
+    """Adverse-media гілка для оркестратора (синхронна обгортка).
+
+    На відміну від main(), приймає slug ЗЗОВНІ — щоб медіа-результати лягли
+    в ту саму теку, що registry.json/sanctions.json (єдиний ключ для
+    aggregate). Повертає summary, не друкує. Чесна деградація: помилки
+    окремих кроків не валять функцію.
+    """
+    output_base = Path(output_dir)
+    raw_dir = output_base / "raw" / slug
+    norm_dir = output_base / "normalized" / slug
+    os.makedirs(raw_dir, exist_ok=True)
+    os.makedirs(norm_dir, exist_ok=True)
+
+    summary: dict[str, Any] = {
+        "queries_sent": 0, "urls_found": 0, "urls_processed": 0,
+        "adverse_found": 0, "classified": 0, "credits_used": 0,
+        "tokens_used": 0, "error": None,
+    }
+
+    try:
+        queries = generate_queries(subject_name)[:max_queries]
+        summary["queries_sent"] = len(queries)
+
+        all_results: list[dict[str, Any]] = []
+        for q in queries:
+            sr = search(q)
+            if sr.get("error"):
+                continue
+            all_results.extend(sr["results"])
+            summary["credits_used"] += sr.get("credits_used", 0)
+        summary["urls_found"] = len(all_results)
+
+        seen: set[str] = set()
+        filtered: list[str] = []
+        for r in all_results:
+            url = r.get("link", "").strip()
+            if url and url not in seen:
+                seen.add(url)
+                if not _is_blocked(url):
+                    filtered.append(url)
+        urls = filtered[:max_urls]
+        summary["urls_processed"] = len(urls)
+
+        # кеш vs нове
+        cached: list[dict[str, Any]] = []
+        to_scrape: list[str] = []
+        for url in urls:
+            nf = norm_dir / f"{_url_hash(url)}.json"
+            if nf.exists():
+                try:
+                    cached.append(json.loads(nf.read_text(encoding="utf-8")))
+                except Exception:
+                    to_scrape.append(url)
+            else:
+                to_scrape.append(url)
+
+        articles: list[dict[str, Any]] = []
+        if to_scrape:
+            articles = asyncio.run(_scrape_all(to_scrape, raw_dir, _SCRAPER_DELAY))
+
+        classified = list(cached)
+        for article in articles:
+            if article.get("error"):
+                continue
+            res = classify(article, subject_name)
+            summary["tokens_used"] += res.get("tokens_used", 0)
+            nf = norm_dir / f"{_url_hash(article['url'])}.json"
+            nf.write_text(json.dumps(res, ensure_ascii=False, indent=2),
+                          encoding="utf-8")
+            classified.append(res)
+
+        summary["classified"] = len(classified)
+        summary["adverse_found"] = sum(
+            1 for r in classified
+            if r.get("is_adverse") and r.get("is_about_target_person"))
+
+    except Exception as exc:
+        summary["error"] = str(exc)
+
+    return summary
+
+
 def main() -> None:
     args = _parse_args()
     person_name: str = args.person_name

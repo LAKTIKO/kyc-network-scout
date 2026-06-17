@@ -14,7 +14,7 @@ app = Celery(
     "kyc_network_scout",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["workers.tasks"],
+    include=["workers.tasks", "workers.registry_task", "workers.sanctions_task", "workers.person_task"],
 )
 
 app.conf.update(
