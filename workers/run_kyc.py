@@ -7,7 +7,7 @@
     → Worker 1 (реєстр компанії або фізособи)
     → Worker 2 (санкційний скринінг)
     → Worker 3 (adverse media)            [за замовчуванням, --no-media вимикає]
-    → aggregate(slug) → JSON + HTML + PDF + граф + evidence ZIP
+    → aggregate(slug) → JSON + HTML + граф + evidence ZIP
 
 Запуск синхронний (послідовний, без Celery-черги) — так працює і локально,
 і в Docker. Celery-воркери лишаються для production-режиму (масштабування).

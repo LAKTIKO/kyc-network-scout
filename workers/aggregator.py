@@ -4,7 +4,7 @@ Worker 2 (санкції) та Worker 3 (adverse media) в єдиний KYC-зв
 Pipeline:
   data/normalized/{slug}/  →  entity resolution  →  trust scoring
     →  граф звʼязків (networkx+pyvis)
-    →  kyc_report.json + report.html + report.pdf
+    →  kyc_report.json + report.html
     →  evidence ZIP усіх первинних джерел
   усе складається в  output/YYYY-MM-DD_HH-MM-SS/
 
@@ -18,6 +18,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
+import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,8 +29,15 @@ from workers.scoring import Entity, compute_trust_score, resolve_entities
 
 logger = logging.getLogger(__name__)
 
-_OUTPUT_BASE = Path(os.getenv("OUTPUT_DIR", "data"))
-_REPORT_BASE = Path(os.getenv("REPORT_DIR", "output"))
+# Абсолютні шляхи — щоб тимчасова зміна cwd в іншому потоці (граф, див.
+# _GRAPH_LOCK) не перенаправила записи відносними шляхами кудись не туди.
+_OUTPUT_BASE = Path(os.getenv("OUTPUT_DIR", "data")).resolve()
+_REPORT_BASE = Path(os.getenv("REPORT_DIR", "output")).resolve()
+
+# pyvis пише lib/ відносно cwd і вимагає os.chdir; cwd глобальний на процес,
+# тож у багатопотоковому веб-режимі (батч) дві паралельні побудови графа
+# затирали б cwd одна одній. Серіалізуємо цю секцію.
+_GRAPH_LOCK = threading.Lock()
 
 
 def _load_json(path: Path) -> dict[str, Any] | None:
@@ -153,12 +162,15 @@ def _build_graph(slug, registry, resolved, report_dir):
         # pyvis пише vis-network lib/ ВІДНОСНО cwd (за замовч. /app, куди
         # appuser не має прав запису → Permission denied). Тимчасово
         # переходимо в report_dir, де права є, і зберігаємо локальним ім'ям.
-        prev_cwd = os.getcwd()
-        try:
-            os.chdir(report_dir)
-            net.save_graph("graph.html")
-        finally:
-            os.chdir(prev_cwd)
+        # cwd глобальний на процес → серіалізуємо під _GRAPH_LOCK, щоб
+        # паралельні перевірки (батч) не затирали cwd одна одній.
+        with _GRAPH_LOCK:
+            prev_cwd = os.getcwd()
+            try:
+                os.chdir(report_dir)
+                net.save_graph("graph.html")
+            finally:
+                os.chdir(prev_cwd)
         # Робимо граф самодостатнім: інлайнимо utils.js (інакше при відкритті
         # звіту в новій вкладці / через blob вкладений lib/ не резолвиться і
         # граф не відкривається), і лагодимо зламаний pyvis CSS-URL (dist/dist).
@@ -524,16 +536,6 @@ def _render_html(context, report_dir):
     return html
 
 
-def _render_pdf(html, report_dir):
-    try:
-        from weasyprint import HTML
-        HTML(string=html).write_pdf(str(report_dir / "report.pdf"))
-        return "report.pdf"
-    except Exception as exc:
-        logger.warning("PDF generation skipped: %s", exc)
-        return None
-
-
 def _build_evidence_zip(slug, report_dir):
     try:
         zip_path = report_dir / "evidence.zip"
@@ -571,8 +573,10 @@ def aggregate(slug: str, subject_label: str | None = None) -> dict[str, Any]:
     has_gaps = any(v in ("skipped", "error", "not_found")
                    for v in coverage.values())
 
+    # Унікальний суфікс — інакше дві перевірки, що завершились в одну секунду
+    # (батч), отримали б ту саму теку й затерли б звіт одна одній.
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
-    report_dir = _REPORT_BASE / ts
+    report_dir = _REPORT_BASE / f"{ts}-{uuid.uuid4().hex[:8]}"
     os.makedirs(report_dir, exist_ok=True)
 
     graph_file = _build_graph(slug, registry, resolved, report_dir)
@@ -622,8 +626,7 @@ def aggregate(slug: str, subject_label: str | None = None) -> dict[str, Any]:
         "registry": registry, "sanctions": sanctions,
         "resolved": resolved, "adverse": adverse, "graph_file": graph_file,
     }
-    html = _render_html(context, report_dir)
-    pdf_file = _render_pdf(html, report_dir)
+    _render_html(context, report_dir)
     zip_file = _build_evidence_zip(slug, report_dir)
 
     summary = {
@@ -633,8 +636,7 @@ def aggregate(slug: str, subject_label: str | None = None) -> dict[str, Any]:
         "report_dir": str(report_dir),
         "coverage": coverage,
         "artifacts": {"json": "kyc_report.json", "html": "report.html",
-                      "pdf": pdf_file, "graph": graph_file,
-                      "evidence_zip": zip_file},
+                      "graph": graph_file, "evidence_zip": zip_file},
         "error": None,
     }
     logger.info("aggregate done: %s — %s (%d/100)", subject,

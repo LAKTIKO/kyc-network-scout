@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System dependencies: Playwright/Chromium + WeasyPrint (PDF-рендеринг)
+# System dependencies для Playwright/Chromium (скрейпінг adverse media)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
@@ -42,6 +42,10 @@ RUN useradd --system --create-home --shell /bin/false appuser
 # ── Application code (owned by appuser from the start) ────────────────────
 COPY --chown=appuser:appuser workers/ workers/
 COPY --chown=appuser:appuser config/ config/
+# webapp/ + landing/ + examples/ потрібні веб-сервісу (лендинг, форма, приклади)
+COPY --chown=appuser:appuser webapp/ webapp/
+COPY --chown=appuser:appuser landing/ landing/
+COPY --chown=appuser:appuser examples/ examples/
 
 USER appuser
 
