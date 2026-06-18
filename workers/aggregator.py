@@ -474,23 +474,26 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
   {% endif %}
 
-  {% set adverse_items = adverse | selectattr("is_adverse") | list %}
+  {# лише згадки про самого субʼєкта (не однофамільця) #}
+  {% set adverse_items = adverse | selectattr("is_adverse") | selectattr("is_about_target_person") | list %}
   <div class="card">
   <h2>Негативні медіа-згадки {% if adverse_items %}<span class="cat" style="margin-left:auto">{{ adverse_items|length }}</span>{% endif %}</h2>
   {% if adverse_items %}
   <table><thead><tr><th style="width:90px">Severity</th><th>Категорія</th><th>Резюме</th><th>Джерело</th></tr></thead><tbody>
   {% for m in adverse_items %}
+    {% set low_conf = (m.match_confidence or "")|lower == "low" %}
     <tr><td><span class="badge sev-{{ m.severity or 'low' }}">{{ m.severity or "low" }}</span></td>
         <td><span class="cat">{{ m.category or "—" }}</span></td>
-        <td>{{ m.summary or "" }}</td>
+        <td>{{ m.summary or "" }}{% if low_conf %}<br><span class="tiny" style="color:var(--medium)">⚠ низька впевненість атрибуції — показано, але не враховано в оцінці ризику</span>{% endif %}</td>
         <td>{% if m.url %}<a href="{{ m.url|e }}" target="_blank" rel="noopener">{{ m.title or "першоджерело" }} ↗</a>{% else %}—{% endif %}</td></tr>
   {% endfor %}</tbody></table>
-  <p class="tiny" style="margin-top:10px">Посилання ведуть на першоджерела (нова вкладка).
-     Повні копії статей на момент перевірки збережено в evidence-архіві.</p>
+  <p class="tiny" style="margin-top:10px">Показано лише згадки, які класифікатор зіставив саме з цим
+     суб'єктом (однофамільці відсіяні). Посилання ведуть на першоджерела (нова вкладка);
+     повні копії статей збережено в evidence-архіві.</p>
   {% elif coverage.adverse_media == "checked" %}
   <div class="callout callout-ok" style="margin:0"><span class="ic">✅</span>
-    <span>Медіа-пошук виконано — негативних згадок не виявлено
-    {% if adverse %}(перевірено {{ adverse|length }} джерел(а), жодне не визнано негативним){% endif %}.</span></div>
+    <span>Медіа-пошук виконано — негативних згадок саме про цього суб'єкта не виявлено
+    {% if adverse %}(перевірено {{ adverse|length }} джерел(а); згадки про однофамільців, за наявності, відсіяно){% endif %}.</span></div>
   {% else %}
   <p class="muted">Медіа-пошук не виконувався.</p>
   {% endif %}
@@ -594,7 +597,9 @@ def aggregate(slug: str, subject_label: str | None = None) -> dict[str, Any]:
         "data_as_of": data_as_of,
         "registry": registry, "sanctions": sanctions,
         "resolved_entities": resolved,
-        "adverse_media_count": len([m for m in adverse if m.get("is_adverse")]),
+        "adverse_media_count": len([
+            m for m in adverse
+            if m.get("is_adverse") and m.get("is_about_target_person")]),
         "adverse_media": [
             {
                 "url": m.get("url"),
@@ -605,7 +610,9 @@ def aggregate(slug: str, subject_label: str | None = None) -> dict[str, Any]:
                 "match_confidence": m.get("match_confidence"),
                 "source": "serper+classifier",
             }
-            for m in adverse if m.get("is_adverse")
+            # лише згадки про самого субʼєкта (не однофамільця)
+            for m in adverse
+            if m.get("is_adverse") and m.get("is_about_target_person")
         ],
     }
     (report_dir / "kyc_report.json").write_text(

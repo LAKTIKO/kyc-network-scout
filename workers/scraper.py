@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import os
+import socket
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -15,6 +18,43 @@ _USER_AGENT: str = os.getenv(
 )
 PAGE_TIMEOUT_MS: int = 30_000
 MAX_TEXT_CHARS: int = 50_000
+
+_ALLOWED_SCHEMES = ("http", "https")
+
+
+def _is_public_http_url(url: str) -> bool:
+    """SSRF-захист. Дозволяємо лише http(s) на ПУБЛІЧНІ IP; блокуємо
+    loopback / приватні / link-local (напр. 169.254.169.254 — метадані хмари) /
+    reserved / multicast. URL для скрейпінгу беруться з пошукової видачі —
+    тобто частково контрольовані ззовні, тож хост треба зарезолвити й
+    перевірити ВСІ його адреси, перш ніж пускати в headless-браузер.
+
+    Залишковий ризик: DNS-rebinding (crawl4ai резолвить хост повторно) — для
+    внутрішнього інструмента прийнятно; за потреби закрити пін-ом IP."""
+    try:
+        p = urlparse(url)
+    except (ValueError, AttributeError):
+        return False
+    if p.scheme not in _ALLOWED_SCHEMES:
+        return False
+    host = p.hostname
+    if not host:
+        return False
+    try:
+        infos = socket.getaddrinfo(host, p.port or 80, proto=socket.IPPROTO_TCP)
+    except (socket.gaierror, UnicodeError, ValueError, OSError):
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        try:
+            addr = ipaddress.ip_address(info[4][0].split("%")[0])
+        except ValueError:
+            return False
+        if (addr.is_private or addr.is_loopback or addr.is_link_local
+                or addr.is_reserved or addr.is_multicast or addr.is_unspecified):
+            return False
+    return True
 
 
 def _extract_markdown(result: Any) -> str:
@@ -65,6 +105,11 @@ async def scrape(url: str) -> dict[str, Any]:
         "scraped_at": datetime.now(timezone.utc).isoformat(),
         "error": None,
     }
+
+    # SSRF-захист: не пускаємо в браузер непублічні / нестандартні URL.
+    if not _is_public_http_url(url):
+        base["error"] = "blocked: непублічний або недозволений URL (SSRF-захист)"
+        return base
 
     try:
         from crawl4ai import AsyncWebCrawler

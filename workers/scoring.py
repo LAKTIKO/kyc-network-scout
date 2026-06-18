@@ -338,13 +338,19 @@ def compute_trust_score(
                -60, "Opendatabot (санкції)",
                f"Санкційний збіг: {n} запис(ів). Списки: {lists_str}.")
 
-    # 2. Негативні медіа.
+    # 2. Негативні медіа. Рахуємо ЛИШЕ згадки про самого субʼєкта (не
+    #    однофамільця: is_about_target_person) і лише з достатньою впевненістю
+    #    атрибуції (match_confidence high/medium). Інакше негативна стаття про
+    #    тезку безпідставно знижувала б оцінку — критичний false-positive.
     media = adverse_media or []
-    adverse_items = [m for m in media if m.get("is_adverse")]
-    if adverse_items:
+    relevant = [m for m in media
+                if m.get("is_adverse") and m.get("is_about_target_person")]
+    scored = [m for m in relevant
+              if (m.get("match_confidence") or "").lower() in ("high", "medium")]
+    if scored:
         by_sev: dict[str, int] = {}
         total_pen = 0
-        for m in adverse_items:
+        for m in scored:
             sev = (m.get("severity") or "low").lower()
             pen = _SEVERITY_PENALTY.get(sev, 4)
             total_pen += pen
