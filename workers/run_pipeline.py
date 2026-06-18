@@ -208,6 +208,7 @@ def run_adverse_media(
     max_queries: int = 5,
     max_urls: int = 5,
     output_dir: str = "data",
+    aliases: list[str] | None = None,
 ) -> dict[str, Any]:
     """Adverse-media гілка для оркестратора (синхронна обгортка).
 
@@ -215,6 +216,10 @@ def run_adverse_media(
     в ту саму теку, що registry.json/sanctions.json (єдиний ключ для
     aggregate). Повертає summary, не друкує. Чесна деградація: помилки
     окремих кроків не валять функцію.
+
+    aliases — додаткові написання імені для пошуку (напр. для компанії:
+    укр. бренд «Файєр Поінт» + англ. «Fire Point»). Бюджет max_queries
+    розподіляється між усіма іменами. Без aliases поведінка незмінна.
     """
     output_base = Path(output_dir)
     raw_dir = output_base / "raw" / slug
@@ -229,7 +234,18 @@ def run_adverse_media(
     }
 
     try:
-        queries = generate_queries(subject_name)[:max_queries]
+        # Шукаємо за основним іменем + аліасами. Бюджет max_queries ділиться
+        # між іменами, щоб жодне не з'їло весь ліміт. Одне ім'я (особа) →
+        # generate_queries(name)[:max_queries], тобто стара поведінка.
+        names = [subject_name]
+        for a in (aliases or []):
+            a = (a or "").strip()
+            if a and a.lower() != subject_name.strip().lower():
+                names.append(a)
+        per_name = max(1, max_queries // len(names))
+        queries: list[dict[str, Any]] = []
+        for nm in names:
+            queries.extend(generate_queries(nm)[:per_name])
         summary["queries_sent"] = len(queries)
 
         all_results: list[dict[str, Any]] = []

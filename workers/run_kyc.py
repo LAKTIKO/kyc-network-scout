@@ -161,9 +161,28 @@ def run_kyc(
 
     # Worker 3 — adverse media (опційно, чесна деградація)
     if with_media:
+        # Для компаній шукаємо за БРЕНДОМ, а не за повною юр-назвою: запит
+        # «ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ "ФАЙЄР ПОІНТ" корупція»
+        # не знаходить нічого, а «Файєр Поінт» / «Fire Point» — десятки
+        # збігів. Інакше — критичний false-negative (чисто там, де скандали).
+        media_name = subject_name
+        media_aliases: list[str] = []
+        media_max_q = 5
+        if result["subject_type"] != "person":
+            from workers.input_resolver import clean_company_name
+            reg = result["steps"].get("registry") or {}
+            brand_ua = clean_company_name(subject_name)
+            if brand_ua:
+                media_name = brand_ua
+            brand_en = clean_company_name(reg.get("name_en"))
+            if brand_en and brand_en.lower() != (brand_ua or "").lower():
+                media_aliases.append(brand_en)
+            media_max_q = 6  # 2 імені × 3 ризик-запити (санкції/розсл./коруп.)
         try:
             from workers.run_pipeline import run_adverse_media  # type: ignore
-            r3 = run_adverse_media(subject_name, slug=slug)
+            r3 = run_adverse_media(media_name, slug=slug,
+                                   max_queries=media_max_q, max_urls=6,
+                                   aliases=media_aliases)
             result["steps"]["adverse_media"] = r3
         except ImportError:
             logger.info("adverse-media гілка недоступна — пропускаю")
