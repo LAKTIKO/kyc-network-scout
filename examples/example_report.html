@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="uk"><head><meta charset="utf-8">
+<title>KYC звіт — АКЦІОНЕРНЕ ТОВАРИСТВО КОМЕРЦІЙНИЙ БАНК "ПРИВАТБАНК"</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;
+       max-width:900px;margin:40px auto;padding:0 24px}
+  h1{font-size:24px;border-bottom:2px solid #333;padding-bottom:8px}
+  h2{font-size:18px;margin-top:28px}
+  .risk{display:inline-block;padding:6px 16px;border-radius:6px;font-weight:700;
+        color:#fff;font-size:18px}
+  .risk.LOW{background:#2e7d32}.risk.MEDIUM{background:#ed6c02}
+  .risk.HIGH{background:#c62828}.risk.INCONCLUSIVE{background:#607d8b}
+  .score{font-size:40px;font-weight:800}
+  .flag{background:#fff3e0;border-left:4px solid #ed6c02;padding:8px 12px;margin:6px 0}
+  table{border-collapse:collapse;width:100%;margin:12px 0}
+  th,td{border:1px solid #ddd;padding:8px 10px;text-align:left;font-size:14px}
+  th{background:#f5f5f5}
+  .muted{color:#777;font-size:13px}
+  .disclaimer{background:#e3f2fd;border:1px solid #2196f3;padding:10px 14px;
+              border-radius:4px;margin:12px 0;font-size:13px}
+  .cov-checked{color:#2e7d32}.cov-not_found{color:#c62828}
+  .cov-skipped,.cov-unavailable_via_api,.cov-error{color:#999}
+  .review{color:#ed6c02;font-weight:600}
+  .trail{font-size:13px}.trail td{padding:4px 8px}
+  .neg{color:#c62828}
+</style></head><body>
+  <h1>KYC Due Diligence — АКЦІОНЕРНЕ ТОВАРИСТВО КОМЕРЦІЙНИЙ БАНК "ПРИВАТБАНК"</h1>
+  <p class="muted">Згенеровано: 2026-06-18T15:24:31.483739+00:00 · KYC Network Scout
+     · тип: company</p>
+
+  <div><span class="score">51/100</span> &nbsp;
+       <span class="risk MEDIUM">MEDIUM RISK</span></div>
+
+  <p class="muted">Бал 51 → MEDIUM за порогами (LOW≥70, MEDIUM≥40)</p>
+
+  <div class="disclaimer">ℹ Цей звіт — <strong>допоміжний інструмент аналітика</strong>,
+     а не автоматичний вердикт. Остаточне KYC-рішення приймає людина на
+     основі цих даних та власного судження.</div>
+
+  <h2>Покриття джерел</h2>
+  <table><tr><th>Джерело</th><th>Статус</th></tr>
+  
+    <tr><td>registry</td><td class="cov-checked">checked</td></tr>
+  
+    <tr><td>sanctions</td><td class="cov-checked">checked</td></tr>
+  
+    <tr><td>adverse_media</td><td class="cov-checked">checked</td></tr>
+  
+  </table>
+  <p class="muted">«checked» — перевірено; «not_found» — суб'єкт не знайдено
+     в джерелі (НЕ означає «чисто»); «skipped/unavailable» — не перевірялось.</p>
+
+  
+  <h2>🚩 Red flags</h2>
+  <div class="flag">Негативні згадки у медіа: low×1, medium×1</div><div class="flag">Регуляторні стягнення (адмін. штрафи/застереження, не санкційний список): 2024-12-06, 10,000,000 грн: за порушення законодавства у сфері запобігання та протидії л; 2024-10-24, 1,700,000 грн: порушення законодавства, що регулює діяльність платіжних сис; 2025-03-07: неналежного виконання банком обов’язку щодо здійснення належ; 2024-12-06: за порушення законодавства у сфері запобігання та протидії л</div><div class="flag">PEP-зв'язок: Публічний декларант серед власників (Садова Лілія Василівна)</div><div class="flag">Реєстр: Податковий борг на 01.01.2022 — 27 674.22 грн</div><div class="flag">Реєстр: Судовий реєстр — 1116540 рішень</div><div class="flag">Реєстр: Виконавчі провадження — 92</div><div class="flag">Реєстр: Судові процеси компанії</div>
+  
+
+  <h2>Розклад балів (audit trail)</h2>
+  <p class="muted">Як сформувався бал 51/100 — крок за кроком,
+     із зазначенням джерела кожного фактора (для відтворюваності рішення).</p>
+  <table class="trail"><tr><th>Крок</th><th>Δ</th><th>Бал</th><th>Джерело</th></tr>
+  
+    <tr><td>Початковий бал (презумпція надійності)</td>
+        <td class="">—</td>
+        <td>100</td><td>—</td></tr>
+  
+    <tr><td>Негативні медіа-згадки</td>
+        <td class="neg">-16</td>
+        <td>84</td><td>adverse_media</td></tr>
+  
+    <tr><td>Регуляторна історія: 4 стягнення (НБУ/АМКУ)</td>
+        <td class="neg">-13</td>
+        <td>71</td><td>registry (regulatory)</td></tr>
+  
+    <tr><td>PEP-зв'язок: Публічний декларант серед власників</td>
+        <td class="">—</td>
+        <td>71</td><td>registry (PEP)</td></tr>
+  
+    <tr><td>Реєстр: Податковий борг на 01.01.2022 — 27 674.22 грн</td>
+        <td class="neg">-5</td>
+        <td>66</td><td>registry (factors)</td></tr>
+  
+    <tr><td>Реєстр: Судовий реєстр — 1116540 рішень</td>
+        <td class="neg">-5</td>
+        <td>61</td><td>registry (factors)</td></tr>
+  
+    <tr><td>Реєстр: Виконавчі провадження — 92</td>
+        <td class="neg">-5</td>
+        <td>56</td><td>registry (factors)</td></tr>
+  
+    <tr><td>Реєстр: Судові процеси компанії</td>
+        <td class="neg">-5</td>
+        <td>51</td><td>registry (factors)</td></tr>
+  
+  </table>
+  <p class="muted"><strong>Підсумок:</strong> Бал 51 → MEDIUM за порогами (LOW≥70, MEDIUM≥40)</p>
+
+  <h2>Дані суб'єкта</h2>
+  
+  <table>
+    <tr><th>Назва / ПІБ</th><td>АКЦІОНЕРНЕ ТОВАРИСТВО КОМЕРЦІЙНИЙ БАНК "ПРИВАТБАНК"</td></tr>
+    <tr><th>ЄДРПОУ</th><td>14360570</td></tr>
+    
+    
+    <tr><th>Статус</th><td>зареєстровано</td></tr>
+    <tr><th>Адреса</th><td>Україна, 01001, місто Київ, ВУЛИЦЯ ГРУШЕВСЬКОГО, будинок 1Д</td></tr>
+    <tr><th>Керівник</th><td>Бьоркнерт Карл Мікаель</td></tr>
+    
+    <tr><th>Остання зміна в реєстрі</th><td>2026-06-09 17:15:01</td></tr>
+    <tr><th>Джерело</th><td><a href="https://opendatabot.ua/c/14360570" target="_blank" rel="noopener">Opendatabot · профіль компанії</a></td></tr>
+    
+  </table>
+  
+
+  <h2>Санкційний скринінг</h2>
+  
+    <p>✓ Збігів не виявлено. Перевірені списки:
+       реєстрові санкційні factors (Opendatabot).</p>
+  
+
+  
+  <h2>Корпоративна структура / пов'язані особи</h2>
+  <table><tr><th>Ім'я</th><th>Роль</th><th>Код</th><th>Джерела</th><th>Статус</th></tr>
+  
+    <tr><td>АКЦІОНЕРНЕ ТОВАРИСТВО КОМЕРЦІЙНИЙ БАНК "ПРИВАТБАНК"</td><td>subject</td>
+        <td>14360570</td><td>registry</td>
+        <td>✓</td></tr>
+  
+    <tr><td>Бьоркнерт Карл Мікаель</td><td>director</td>
+        <td>—</td><td>registry</td>
+        <td>✓</td></tr>
+  
+    <tr><td>ЄДИНИМ АКЦІОНЕРОМ БАНКУ, ЯКОМУ НАЛЕЖИТЬ 100% АКЦІЙ БАНКУ, Є ДЕРЖАВА</td><td>засновник</td>
+        <td>—</td><td>registry</td>
+        <td>✓</td></tr>
+  </table>
+  <p><a href="graph.html">↗ Інтерактивний граф зв'язків</a></p>
+  
+
+  
+  <h2>Негативні медіа-згадки</h2>
+  <table><tr><th>Severity</th><th>Категорія</th><th>Резюме</th><th>Джерело</th></tr>
+  
+    <tr><td>medium</td><td>other</td><td>Стаття містить численні негативні відгуки клієнтів про ПриватБанк, зокрема скарги на безпідставне блокування рахунків, неналежне обслуговування та вимоги фінансового моніторингу без правового обґрунтування. Також зазначено, що банк у 2016 році перейшов у державну власність через невиконання програми докапіталізації та від'ємне значення капіталу.</td>
+        <td><a href="https://finance.ua/ua/banks/privatbank" target="_blank" rel="noopener">ПриватБанк - сайт, телефон, реквізити, МФО, ЄДРПОУ, контактна інформація</a></td></tr>
+  
+    <tr><td>low</td><td>litigation</td><td>Господарський суд Київської області повернув позовну заяву без розгляду через процесуальні порушення з боку ПАТ КБ 'ПРИВАТБАНК', який діяв як представник ПАТ 'АКЦЕНТ-БАНК': позов підписаний неуповноваженою особою та не надано належних доказів сплати судового збору.</td>
+        <td><a href="https://zakononline.ua/court-decisions/show/42012854" target="_blank" rel="noopener">Ухвала суду від 22.12.2014 по справі № 911/5439/14 Господарський суд Київської області 
+             | ZAKONONLINE - Право знати!</a></td></tr>
+  </table>
+  <p class="muted">Посилання ведуть на першоджерела (відкриваються в новій
+     вкладці). Повні копії статей на момент перевірки збережено в evidence-архіві.</p>
+  
+
+  <p class="muted">Усі первинні джерела збережено в evidence-архіві прогону.
+     KYC Network Scout — автоматизований OSINT pipeline.</p>
+</body></html>
