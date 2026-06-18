@@ -233,9 +233,13 @@ def main(argv: list[str] | None = None) -> int:
     print("\n" + "=" * 60)
     print(f"  KYC ЗВІТ: {rep.get('subject', out['input'])}")
     print("=" * 60)
-    print(f"  Тип:         {out['subject_type']}")
-    print(f"  Trust score: {rep.get('trust_score')}/100")
-    print(f"  Рівень:      {rep.get('risk_level')}")
+    print(f"  Тип:          {out['subject_type']}")
+    _ts = rep.get("trust_score")
+    if _ts is None or rep.get("risk_level") == "INCONCLUSIVE":
+        print("  Оцінка ризику: — (неповна перевірка)")
+    else:
+        print(f"  Оцінка ризику: {100 - _ts}/100  (0 = мін, 100 = макс)")
+    print(f"  Рівень:       {rep.get('risk_level')}")
     cov = rep.get("coverage") or {}
     print(f"  Покриття:    " + ", ".join(f"{k}={v}" for k, v in cov.items()))
     print(f"  Звіт:        {rep.get('report_dir')}")

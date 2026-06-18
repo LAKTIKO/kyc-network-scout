@@ -1,44 +1,49 @@
 ┌──────────────────────────────────────────────────────────┐
-│                  KYC Network Scout Phase 1                │
+│                  KYC Network Scout                       │
+│            Архітектура (поточна)                          │
 └──────────────────────────────────────────────────────────┘
 
-   User (CLI / docker compose exec)
+ВХІД
+   ┌─ Веб (FastAPI, :8000) ── форма + пакетна перевірка (до 5)
+   │     POST /api/check → фоновий пул → polling → готовий звіт
+   │     (basic-auth через KYC_WEB_PASSWORD; персист задач у output/.jobs)
+   │
+   └─ CLI ── docker compose run --rm kyc <ЄДРПОУ | РНОКПП | назва>
             │
             ▼
-   ┌──────────────────┐
-   │  search_task     │ ◄── Celery task in queue
-   │  (worker-search) │
-   └────────┬─────────┘
-            │
-            │ generates 30 queries (UA/RU/EN with RF/BY focus)
-            │ sends to Serper API → returns ~50 URLs
-            │
-            │ for each unique URL → apply_async()
-            ▼
-   ┌─────────────────────────────────────┐
-   │  Redis Queue (broker)               │
-   │  ╔═══════════════════════════════╗  │
-   │  ║ scrape_and_classify_task * N  ║  │
-   │  ╚═══════════════════════════════╝  │
-   └──────────┬──────────────────────────┘
-              │
-              ▼
-   ┌─────────────────────┐
-   │ scrape_and_classify │ ◄── workers process in parallel
-   │ (worker-scraper)    │      (concurrency=1, scraper-heavy)
-   └────────┬────────────┘
-            │
-            │ 1. Crawl4AI + Playwright → markdown
-            │ 2. Anthropic Claude Sonnet 4.6 → structured JSON
-            │ 3. Save to data/normalized/{slug}/{hash}.json
-            ▼
-   ┌─────────────────────────────────────┐
-   │ Output: data/normalized/{slug}/     │
-   │  • {hash}.json (verdict)            │
-   │  • severity, category, summary      │
-   │  • match_evidence, key_quotes       │
-   └─────────────────────────────────────┘
+   ┌──────────────────────────────────────────────────────┐
+   │  run_kyc (синхронний оркестратор)                    │
+   │  input_resolver → тип суб'єкта + резолвинг назви      │
+   └───────┬──────────────────────────────────────────────┘
+           │  (послідовно, чесна деградація — збій джерела
+           │   не валить прогін, лише позначається в покритті)
+           ▼
+   ┌─ Worker 1  registry_task / person_task  ── Opendatabot (реєстр, PEP, factors)
+   ├─ Worker 2  sanctions_task ─────────────── Opendatabot (санкції; фізособи: list-complete)
+   └─ Worker 3  run_adverse_media ──────────── Serper → SSRF-гард → Crawl4AI → Claude
+           │       (пошук за брендом UA/EN; класифікатор відсіює однофамільців)
+           ▼
+   ┌──────────────────────────────────────────────────────┐
+   │  aggregator                                          │
+   │  entity resolution + скоринг ризику (0–100) +        │
+   │  audit trail + граф (pyvis) + evidence ZIP           │
+   │  → output/<timestamp>/: kyc_report.json, report.html,│
+   │     graph.html, evidence.zip                         │
+   └──────────────────────────────────────────────────────┘
 
-   ┌───────────────┐
-   │ Beat Scheduler│ → heartbeat every 10 minutes (demo)
-   └───────────────┘
+Усе зшивається під єдиним slug (company_<ЄДРПОУ> / person_<РНОКПП>).
+
+─────────────────────────────────────────────────────────────
+ASYNC-РЕЖИМ (масштабування, опційно) — Celery + Redis
+─────────────────────────────────────────────────────────────
+   search_task (worker-search) → генерує запити → Serper → URLs
+        │  apply_async() по кожному URL
+        ▼
+   Redis broker → scrape_and_classify_task * N (worker-scraper)
+        │  Crawl4AI + Playwright → markdown → Claude → JSON
+        ▼
+   data/normalized/{slug}/{hash}.json
+   Beat scheduler → heartbeat (health)
+
+Синхронний run_kyc не потребує Redis — найпростіший шлях для одиничних
+та невеликих пакетних перевірок; Celery-шлях лишається для масштабу.
