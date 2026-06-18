@@ -335,13 +335,25 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
       {% if subject_type %}<span class="subtype">{{ "Компанія" if subject_type == "company" else "Фізична особа" }}</span>{% endif %}
       <h1>{{ subject }}</h1>
       <p class="reason">{{ level_reason }}</p>
+      {% if risk_level == "INCONCLUSIVE" %}
+      <div class="callout callout-warn" style="margin:12px 0 0"><span class="ic">⚠️</span>
+        <span>Оцінку ризику <strong>не сформовано</strong> — перевірка неповна (див. покриття джерел).
+        Це <u>не</u> «низький ризик»; потрібна доперевірка.</span></div>
+      {% else %}
       <div class="bar {{ risk_level }}"><i style="width:{{ risk_score if risk_score > 2 else 2 }}%"></i></div>
       <div class="scalelbl"><span>0 — мінімальний ризик</span><span>100 — максимальний</span></div>
+      {% endif %}
     </div>
     <div class="gauge">
+      {% if risk_level == "INCONCLUSIVE" %}
+      <div class="score" style="color:var(--inconclusive)">—</div>
+      <span class="risk INCONCLUSIVE">INCONCLUSIVE</span>
+      <p class="tiny" style="margin:8px 0 0">Неповна перевірка</p>
+      {% else %}
       <div class="score">{{ risk_score }}<span>/100</span></div>
-      <span class="risk {{ risk_level }}">{{ risk_level }}{% if risk_level != "INCONCLUSIVE" %} RISK{% endif %}</span>
+      <span class="risk {{ risk_level }}">{{ risk_level }} RISK</span>
       <p class="tiny" style="margin:8px 0 0">Оцінка ризику</p>
+      {% endif %}
     </div>
   </div>
 
@@ -373,8 +385,11 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="flags">
   {% for f in red_flags %}
     {% set fl = f|lower %}
-    {% if 'санкц' in fl or 'критич' in fl or 'відмив' in fl or 'протидії л' in fl or 'кримінал' in fl or 'розшук' in fl or 'inconclusive' in fl or 'неповна перевірка' in fl %}
+    {# критично: санкції/кримінал/AML/критичний сигнал реєстру/INCONCLUSIVE,
+       а також негативні медіа з тяжкістю critical/high (формат "critical×N") #}
+    {% if 'санкц' in fl or 'критич' in fl or 'відмив' in fl or 'протидії л' in fl or 'кримінал' in fl or 'розшук' in fl or 'inconclusive' in fl or 'неповна перевірка' in fl or 'critical×' in fl or 'high×' in fl %}
       {% set tier, lbl = 'high', 'критично' %}
+    {# контекст: масштабна судова/виконавча статистика, дрібний податковий борг #}
     {% elif 'судовий реєстр' in fl or 'виконавч' in fl or 'судові процеси' in fl or 'податковий борг' in fl or 'рішень' in fl %}
       {% set tier, lbl = 'info', 'контекст' %}
     {% else %}
@@ -453,10 +468,11 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
     </p>
     {% endif %}
     <p class="tiny" style="margin:12px 0 0">Джерело:
-      {% if registry and registry.edrpou %}<a href="https://opendatabot.ua/c/{{ registry.edrpou|e }}" target="_blank" rel="noopener">Opendatabot · профіль і санкційні фактори ↗</a>
-      {% else %}<a href="https://opendatabot.ua/sanctions" target="_blank" rel="noopener">Opendatabot · перевірка санкцій ↗</a>{% endif %}
-      — агрегує переліки <strong>РНБО</strong>, <strong>OFAC</strong> (SDN / Non-SDN),
-      <strong>ЄС</strong>, <strong>Велика Британія</strong>, <strong>Канада</strong>.</p>
+      {% if registry and registry.edrpou %}<a href="https://opendatabot.ua/c/{{ registry.edrpou|e }}" target="_blank" rel="noopener">Opendatabot · профіль і санкційні фактори ↗</a>{% else %}<a href="https://opendatabot.ua/sanctions" target="_blank" rel="noopener">Opendatabot · перевірка санкцій ↗</a>{% endif %}.
+      {% if subject_type == "person" %}Перевірено переліки: <strong>РНБО</strong>, <strong>OFAC</strong> (SDN / Non-SDN),
+      <strong>ЄС</strong>, <strong>Велика Британія</strong>, <strong>Канада</strong>.{% else %}Для компаній перевіряються <strong>санкційні фактори українського реєстру</strong>
+      (через Opendatabot). Окремий мультиюрисдикційний скринінг (OFAC / ЄС / Велика Британія / Канада)
+      виконується лише для фізосіб — тож відсутність збігу тут не є повним міжнародним санкційним кліренсом.{% endif %}</p>
   {% else %}<p class="muted">Санкційний скринінг не виконувався.</p>{% endif %}
   </div>
 

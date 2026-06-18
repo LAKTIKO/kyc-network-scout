@@ -245,10 +245,11 @@ _CLIENT_BRIDGE = """
   function rowHtml(it){
     var right;
     if(it.state==='done'){
-      var risk=(it.trust_score==null)?'—':(100-it.trust_score);
+      var risk=(it.trust_score==null||it.risk_level==='INCONCLUSIVE')?'—':(100-it.trust_score);
       var c=COLORS[it.risk_level]||'#64748b';
+      var rlabel=(risk==='—')?it.risk_level:(it.risk_level+' · '+risk+'/100');
       right='<span style="display:inline-block;padding:3px 10px;border-radius:999px;color:#fff;'+
-        'font-weight:700;font-size:11px;background:'+c+'">'+it.risk_level+' · '+risk+'/100</span>'+
+        'font-weight:700;font-size:11px;background:'+c+'">'+rlabel+'</span>'+
         ' <a href="'+it.report_url+'" target="_blank" style="font-weight:600;font-size:13px;'+
         'color:#1d4ed8;text-decoration:none;margin-left:6px">Звіт ↗</a>';
     } else if(it.state==='error'){
