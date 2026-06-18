@@ -33,6 +33,3 @@ opensanctions/
 # TODO: замінити на знеособлену версію перед комітом.
 examples/response_example.json
 output/
-
-# приклад evidence-архіву містив реальні дані — не публікуємо
-examples/example_evidence.zip
