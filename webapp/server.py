@@ -42,6 +42,15 @@ _JOBS_DIR = _REPORT_BASE / ".jobs"
 _WEB_USER = os.getenv("KYC_WEB_USER", "kyc")
 _WEB_PASSWORD = os.getenv("KYC_WEB_PASSWORD")
 
+# Ліміти проти необмеженого росту памʼяті та витрат на API.
+_MAX_JOBS = int(os.getenv("KYC_MAX_JOBS", "1000"))        # кап in-memory стору
+_MAX_INFLIGHT = int(os.getenv("KYC_MAX_INFLIGHT", "12"))  # кап задач у роботі/черзі
+
+if not _WEB_PASSWORD:
+    logger.warning(
+        "⚠ KYC_WEB_PASSWORD не заданий — веб ВІДКРИТИЙ без авторизації. "
+        "Для деплою команді обовʼязково задай пароль у .env (і не публікуй порт у відкритий інтернет).")
+
 app = FastAPI(title="KYC Network Scout")
 
 
@@ -92,6 +101,37 @@ def _get(job_id: str) -> dict[str, Any] | None:
         return dict(j) if j else None
 
 
+def _under_report_base(rd: str | None) -> bool:
+    """Чи лежить тека звіту в межах _REPORT_BASE (захист довіри до report_dir,
+    зокрема відновленого з диску .jobs)."""
+    if not rd:
+        return False
+    try:
+        base = Path(rd).resolve()
+    except (OSError, ValueError, RuntimeError):
+        return False
+    return base == _REPORT_BASE or _REPORT_BASE in base.parents
+
+
+def _inflight_count() -> int:
+    with _jobs_lock:
+        return sum(1 for j in _jobs.values()
+                   if j.get("state") in ("queued", "running"))
+
+
+def _evict_old_jobs() -> None:
+    """Кап in-memory стору: викидаємо найстаріші ЗАВЕРШЕНІ задачі (звіти
+    лишаються на диску й у .jobs, тож лінки ще відновлювані через рестарт)."""
+    with _jobs_lock:
+        overflow = len(_jobs) - _MAX_JOBS
+        if overflow <= 0:
+            return
+        removable = [jid for jid, j in _jobs.items()
+                     if j.get("state") in ("done", "error")]
+        for jid in removable[:overflow]:
+            _jobs.pop(jid, None)
+
+
 def _persist(job_id: str) -> None:
     """Зберігаємо завершену задачу на диск, щоб лінки на звіти переживали
     рестарт сервера (in-memory мапа інакше втрачається)."""
@@ -108,17 +148,24 @@ def _persist(job_id: str) -> None:
 
 
 def _load_jobs() -> None:
-    """Відновлюємо завершені задачі з диску при старті."""
+    """Відновлюємо завершені задачі з диску при старті — лише найновіші
+    _MAX_JOBS (за часом файлу), і лише ті, чия тека лежить під _REPORT_BASE."""
     if not _JOBS_DIR.exists():
         return
+    try:
+        files = sorted(_JOBS_DIR.glob("*.json"),
+                       key=lambda p: p.stat().st_mtime, reverse=True)[:_MAX_JOBS]
+    except OSError:
+        return
     restored = 0
-    for p in _JOBS_DIR.glob("*.json"):
+    for p in files:
         try:
             d = json.loads(p.read_text(encoding="utf-8"))
         except Exception:  # noqa: BLE001
             continue
         rd = d.get("report_dir")
-        if d.get("state") == "done" and rd and (Path(rd) / "report.html").exists():
+        if (d.get("state") == "done" and _under_report_base(rd)
+                and (Path(rd) / "report.html").exists()):
             _jobs[p.stem] = d
             restored += 1
     if restored:
@@ -171,11 +218,20 @@ def api_check(req: CheckRequest) -> JSONResponse:
 
     if not name and not code:
         return JSONResponse({"error": "Вкажіть назву/ПІБ або код."}, status_code=400)
+    if len(name) > 300 or len(code) > 64:
+        return JSONResponse({"error": "Занадто довгий ввід."}, status_code=400)
+
+    # Кап одночасних перевірок — захист від випадкового спалювання API-кредитів.
+    if _inflight_count() >= _MAX_INFLIGHT:
+        return JSONResponse(
+            {"error": f"Забагато перевірок у роботі (ліміт {_MAX_INFLIGHT}). Спробуйте трохи згодом."},
+            status_code=429)
 
     # субʼєкт для run_kyc: код у пріоритеті (стабільний ID), інакше назва.
     subject = code or name
     full_name = name or None
 
+    _evict_old_jobs()
     job_id = uuid.uuid4().hex
     _set(job_id, state="queued", message="У черзі…")
     _pool.submit(_run_job, job_id, subject, is_person, full_name)
@@ -196,17 +252,18 @@ def api_status(job_id: str) -> JSONResponse:
 @app.get("/report/{job_id}/")
 def report_index(job_id: str) -> Response:
     j = _get(job_id)
-    if not j or j.get("state") != "done":
+    if not j or j.get("state") != "done" or not _under_report_base(j.get("report_dir")):
         return HTMLResponse("<h1>Звіт ще не готовий</h1>", status_code=404)
     return FileResponse(Path(j["report_dir"]) / "report.html")
 
 
 @app.get("/report/{job_id}/{fname:path}")
 def report_asset(job_id: str, fname: str) -> Response:
-    """Супутні файли звіту (graph.html та вкладені lib/… ресурси графа) —
-    лише в межах теки звіту (захист від path-traversal)."""
+    """Супутні файли звіту (graph.html та вкладені lib/… ресурси графа) — лише
+    в межах теки звіту, яка сама має бути під _REPORT_BASE (захист від
+    path-traversal і від підробленого report_dir)."""
     j = _get(job_id)
-    if not j or j.get("state") != "done":
+    if not j or j.get("state") != "done" or not _under_report_base(j.get("report_dir")):
         return Response(status_code=404)
     base = Path(j["report_dir"]).resolve()
     target = (base / fname).resolve()
