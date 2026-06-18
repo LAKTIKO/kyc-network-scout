@@ -244,6 +244,8 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
     {% if registry.director %}<tr><th>Керівник</th><td>{{ registry.director }}</td></tr>{% endif %}
     {% if registry.is_pep %}<tr><th>PEP</th><td>Так — публічний діяч</td></tr>{% endif %}
     {% if data_as_of %}<tr><th>Остання зміна в реєстрі</th><td>{{ data_as_of }}</td></tr>{% endif %}
+    {% if registry.edrpou %}<tr><th>Джерело</th><td><a href="https://opendatabot.ua/c/{{ registry.edrpou|e }}" target="_blank" rel="noopener">Opendatabot · профіль компанії</a></td></tr>
+    {% elif registry.source_url %}<tr><th>Джерело</th><td><a href="{{ registry.source_url|e }}" target="_blank" rel="noopener">{{ registry.source or "opendatabot" }}</a></td></tr>{% endif %}
   </table>
   {% elif coverage.registry == "not_found" %}
   <p class="flag">Суб'єкта НЕ знайдено в реєстрі. Це не означає «чисто» —
@@ -282,10 +284,13 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 
   {% if adverse %}
   <h2>Негативні медіа-згадки</h2>
-  <table><tr><th>Severity</th><th>Категорія</th><th>Резюме</th></tr>
+  <table><tr><th>Severity</th><th>Категорія</th><th>Резюме</th><th>Джерело</th></tr>
   {% for m in adverse if m.is_adverse %}
-    <tr><td>{{ m.severity }}</td><td>{{ m.category }}</td><td>{{ m.summary or "" }}</td></tr>
+    <tr><td>{{ m.severity }}</td><td>{{ m.category }}</td><td>{{ m.summary or "" }}</td>
+        <td>{% if m.url %}<a href="{{ m.url|e }}" target="_blank" rel="noopener">{{ m.title or "першоджерело" }}</a>{% else %}—{% endif %}</td></tr>
   {% endfor %}</table>
+  <p class="muted">Посилання ведуть на першоджерела (відкриваються в новій
+     вкладці). Повні копії статей на момент перевірки збережено в evidence-архіві.</p>
   {% endif %}
 
   <p class="muted">Усі первинні джерела збережено в evidence-архіві прогону.
@@ -367,6 +372,18 @@ def aggregate(slug: str, subject_label: str | None = None) -> dict[str, Any]:
         "registry": registry, "sanctions": sanctions,
         "resolved_entities": resolved,
         "adverse_media_count": len([m for m in adverse if m.get("is_adverse")]),
+        "adverse_media": [
+            {
+                "url": m.get("url"),
+                "title": m.get("title"),
+                "severity": m.get("severity"),
+                "category": m.get("category"),
+                "summary": m.get("summary"),
+                "match_confidence": m.get("match_confidence"),
+                "source": "serper+classifier",
+            }
+            for m in adverse if m.get("is_adverse")
+        ],
     }
     (report_dir / "kyc_report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
