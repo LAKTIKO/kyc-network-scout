@@ -23,10 +23,15 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+# Локальний запуск (uvicorn з venv) бере ключі з .env; у Docker вони йдуть через
+# env_file, тож тут load_dotenv просто нічого не знаходить — безпечно в обох.
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(name)s: %(message)s")
