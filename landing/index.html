@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="uk"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KYC Network Scout — OSINT Due-Diligence за один запит</title>
+<meta name="description" content="Автоматизована KYC / due-diligence перевірка компаній і фізосіб України: реєстри, санкції, негативні медіа — структурований звіт із прозорим скорингом.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --font:'Onest',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --bg:#f1f5f9; --surface:#ffffff; --ink:#0f172a; --ink-soft:#475569;
+    --muted:#94a3b8; --border:#e2e8f0; --border-soft:#eef2f6;
+    --brand:#1d4ed8; --brand-2:#3b82f6; --brand-deep:#0b1220; --brand-soft:#eff6ff;
+    --low:#16a34a; --medium:#d97706; --high:#dc2626;
+    --radius:16px; --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px rgba(15,23,42,.08);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);
+       color:var(--ink);background:var(--bg);margin:0;font-size:16px;line-height:1.6;
+       -webkit-font-smoothing:antialiased}
+  a{color:var(--brand);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+  .muted{color:var(--ink-soft)}
+  .tiny{font-size:13px;color:var(--muted)}
+  h1,h2,h3{line-height:1.2}
+
+  /* ── Nav ── */
+  nav{position:sticky;top:0;z-index:50;background:rgba(11,18,32,.92);
+      backdrop-filter:blur(8px);color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:62px}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700;letter-spacing:.2px;color:#fff}
+  .brand .logo{width:32px;height:32px;border-radius:9px;
+      background:linear-gradient(135deg,var(--brand-2),var(--brand));
+      display:flex;align-items:center;justify-content:center;font-size:17px}
+  .brand small{display:block;font-weight:500;color:#93a4c4;font-size:11px}
+  .navlinks{display:flex;gap:26px;align-items:center}
+  .navlinks a{color:#cbd5e1;font-size:14px;font-weight:500}
+  .navlinks a:hover{color:#fff;text-decoration:none}
+  .btn{display:inline-block;background:var(--brand);color:#fff;font-weight:600;
+       padding:11px 22px;border-radius:10px;border:none;cursor:pointer;font-size:15px;
+       transition:transform .08s,background .15s}
+  .btn:hover{background:#1e40af;text-decoration:none;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff}
+  .btn.ghost:hover{background:rgba(255,255,255,.08)}
+
+  /* ── Hero ── */
+  .hero{background:radial-gradient(1100px 480px at 78% -10%,#16244a 0%,var(--brand-deep) 55%);
+        color:#fff;padding:74px 0 90px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;inset:0;
+        background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+        background-size:42px 42px;mask:radial-gradient(700px 320px at 75% 0,#000,transparent 75%)}
+  .hero .wrap{position:relative;z-index:2;display:grid;grid-template-columns:1.05fr .95fr;
+        gap:52px;align-items:center}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;
+        color:#93c5fd;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);
+        padding:6px 13px;border-radius:999px;margin-bottom:20px}
+  .hero h1{font-size:42px;font-weight:800;letter-spacing:-1px;margin:0 0 18px}
+  .hero h1 .grad{background:linear-gradient(90deg,#60a5fa,#93c5fd);
+        -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .hero p.lead{font-size:18px;color:#c7d2e3;margin:0 0 26px;max-width:520px}
+  .hero .pts{list-style:none;padding:0;margin:0 0 30px;display:grid;gap:9px}
+  .hero .pts li{display:flex;gap:10px;align-items:flex-start;color:#dbe4f0;font-size:15px}
+  .hero .pts li b{color:#fff}
+  .hero .check{color:#34d399;flex:0 0 auto;font-weight:800}
+
+  /* ── Search card ── */
+  .search{background:var(--surface);color:var(--ink);border-radius:var(--radius);
+        box-shadow:0 20px 60px rgba(2,6,23,.45);padding:26px;border:1px solid rgba(255,255,255,.6)}
+  .search h3{margin:0 0 4px;font-size:18px}
+  .search .sub{font-size:13px;color:var(--ink-soft);margin:0 0 18px}
+  .tabs{display:flex;background:#f1f5f9;border-radius:10px;padding:4px;margin-bottom:18px}
+  .tabs button{flex:1;border:none;background:none;padding:9px;border-radius:8px;cursor:pointer;
+        font-weight:600;font-size:14px;color:var(--ink-soft);transition:.15s}
+  .tabs button.active{background:#fff;color:var(--brand);box-shadow:0 1px 3px rgba(15,23,42,.12)}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink)}
+  .field input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;
+        font-size:15px;font-family:inherit;background:#fff;transition:.15s}
+  .field input:focus{outline:none;border-color:var(--brand-2);box-shadow:0 0 0 3px var(--brand-soft)}
+  .search .btn{width:100%;padding:13px;font-size:16px;margin-top:4px}
+  .rowhint{font-size:12px;font-weight:600;color:var(--ink-soft);margin:0 0 8px}
+  .rows{display:grid;gap:8px;margin-bottom:9px}
+  .qrow{display:flex;gap:7px;align-items:center}
+  .qrow input{padding:11px 12px;border:1px solid var(--border);border-radius:9px;font-size:14px;
+        font-family:inherit;width:100%;min-width:0;background:#fff;transition:.15s}
+  .qrow input.qn{flex:1.7}.qrow input.qc{flex:1}
+  .qrow input:focus{outline:none;border-color:var(--brand-2);box-shadow:0 0 0 3px var(--brand-soft)}
+  .qrm{flex:0 0 auto;width:32px;height:32px;border:1px solid var(--border);background:#f8fafc;
+        border-radius:8px;color:#94a3b8;cursor:pointer;font-size:17px;line-height:1;transition:.15s}
+  .qrm:hover{color:#dc2626;border-color:#fecaca;background:#fef2f2}
+  .qrm[disabled]{opacity:.35;cursor:not-allowed}
+  .addrow{width:100%;background:#fff;border:1px dashed var(--border);color:var(--brand);
+        padding:10px;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer;
+        margin-bottom:12px;transition:.15s}
+  .addrow:hover{background:var(--brand-soft);border-color:var(--brand-2)}
+  .addrow[disabled]{opacity:.5;cursor:not-allowed;background:#f8fafc;color:var(--muted)}
+  .fanout{margin-top:16px;padding-top:16px;border-top:1px dashed var(--border)}
+  .fanout .tiny{margin:0 0 8px}
+  .q{display:inline-block;font-size:12px;background:#f8fafc;border:1px solid var(--border);
+        color:var(--ink-soft);padding:4px 10px;border-radius:999px;margin:0 5px 6px 0}
+  .q b{color:var(--brand)}
+
+  /* ── Sections ── */
+  section.block{padding:72px 0}
+  .center{text-align:center;max-width:680px;margin:0 auto 48px}
+  .center .eyebrow{color:var(--brand);background:var(--brand-soft);border-color:#bfdbfe}
+  h2.title{font-size:32px;font-weight:800;letter-spacing:-.6px;margin:0 0 14px}
+  .center p{font-size:17px;color:var(--ink-soft);margin:0}
+
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .step{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+        padding:24px 20px;box-shadow:var(--shadow);position:relative}
+  .step .n{width:34px;height:34px;border-radius:10px;background:var(--brand-soft);color:var(--brand);
+        font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+  .step h3{font-size:16px;margin:0 0 7px}
+  .step p{font-size:14px;color:var(--ink-soft);margin:0}
+  .arrow{position:absolute;right:-15px;top:42px;color:var(--border);font-size:22px;z-index:2}
+  .step:last-child .arrow{display:none}
+
+  .sources{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:8px}
+  .src{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+        padding:22px;box-shadow:var(--shadow)}
+  .src .ic{font-size:24px;margin-bottom:12px}
+  .src h3{font-size:16px;margin:0 0 7px}
+  .src p{font-size:14px;color:var(--ink-soft);margin:0}
+  .src .tag{display:inline-block;margin-top:12px;font-size:11px;font-weight:700;letter-spacing:.4px;
+        text-transform:uppercase;color:var(--brand);background:var(--brand-soft);padding:3px 9px;border-radius:6px}
+
+  /* ── Example ── */
+  .example{background:var(--brand-deep);color:#fff;border-radius:24px;overflow:hidden;
+        display:grid;grid-template-columns:1fr 1.15fr;gap:0;box-shadow:0 30px 70px rgba(2,6,23,.4)}
+  .example .copy{padding:48px 44px}
+  .example h2{font-size:28px;font-weight:800;margin:0 0 14px;letter-spacing:-.5px}
+  .example p{color:#c7d2e3;font-size:15.5px;margin:0 0 20px}
+  .example ul{list-style:none;padding:0;margin:0 0 28px;display:grid;gap:10px}
+  .example li{display:flex;gap:10px;color:#dbe4f0;font-size:14.5px}
+  .example li .check{color:#34d399;font-weight:800}
+  .example .shot{padding:34px 0 0 34px;overflow:hidden}
+  .example .shot img{width:100%;border-radius:14px 0 0 0;border:1px solid rgba(255,255,255,.12);
+        border-bottom:none;border-right:none;display:block;box-shadow:-10px -10px 40px rgba(0,0,0,.25)}
+  .example .btns{display:flex;gap:12px;flex-wrap:wrap}
+
+  /* ── Limitations ── */
+  .limit{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+        padding:30px 34px;box-shadow:var(--shadow)}
+  .limit ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:18px 34px}
+  .limit li{display:flex;gap:13px}
+  .limit .ic{font-size:20px;flex:0 0 auto}
+  .limit h3{font-size:15px;margin:0 0 4px}
+  .limit p{font-size:13.5px;color:var(--ink-soft);margin:0}
+
+  /* ── Footer ── */
+  footer{background:var(--brand-deep);color:#93a4c4;padding:44px 0;margin-top:20px;font-size:14px}
+  footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+  footer .brand small{color:#64748b}
+  .disc{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;
+        padding:14px 18px;font-size:13.5px;margin-top:26px;display:flex;gap:10px}
+
+  @media (max-width:880px){
+    .hero .wrap{grid-template-columns:1fr;gap:36px}
+    .steps{grid-template-columns:1fr 1fr}.arrow{display:none}
+    .sources{grid-template-columns:1fr}
+    .example{grid-template-columns:1fr}.example .shot{padding:0 24px 0;order:-1}
+    .example .shot img{border-radius:14px}
+    .limit ul{grid-template-columns:1fr}
+    .navlinks{display:none}.hero h1{font-size:32px}
+  }
+</style></head><body>
+
+<nav><div class="wrap">
+  <a class="brand" href="#top"><span class="logo">🛡️</span>
+    <span>KYC Network Scout<small>OSINT Due-Diligence Engine</small></span></a>
+  <div class="navlinks">
+    <a href="#how">Як це працює</a>
+    <a href="#sources">Джерела</a>
+    <a href="#example">Приклад звіту</a>
+    <a href="#limits">Обмеження</a>
+    <a class="btn" href="#start">Перевірити</a>
+  </div>
+</div></nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">⚡ Один запит → повний due-diligence звіт</span>
+      <h1>Перевірка контрагента <span class="grad">за лічені хвилини</span>, а не дні</h1>
+      <p class="lead">Вводите назву компанії та ЄДРПОУ — або ПІБ і РНОКПП фізособи. Система
+        автоматично формує 5–6 пошукових запитів, перевіряє реєстри, санкційні списки
+        та негативні медіа й повертає структурований звіт із прозорим скорингом.</p>
+      <ul class="pts">
+        <li><span class="check">✓</span> <span><b>Реєстри</b> — ЄДРПОУ / РНОКПП, бенефіціари, статус, PEP</span></li>
+        <li><span class="check">✓</span> <span><b>Санкції</b> — звірка з національними та міжнародними списками</span></li>
+        <li><span class="check">✓</span> <span><b>Negative media</b> — AI-класифікатор на 3 мовах (UA / RU / EN)</span></li>
+        <li><span class="check">✓</span> <span><b>Audit trail</b> — кожен фактор ризику простежується до джерела</span></li>
+      </ul>
+      <a class="btn" href="#start" style="padding:13px 28px;font-size:16px">Спробувати на прикладі →</a>
+    </div>
+
+    <div class="search" id="start">
+      <h3>Запустити перевірку</h3>
+      <p class="sub">Демо-режим: форма показує, як один ввід розгортається у пошуковий fan-out.</p>
+      <div class="tabs">
+        <button id="tab-company" class="active" onclick="setMode('company')">🏢 Компанія</button>
+        <button id="tab-person" onclick="setMode('person')">👤 Фізособа</button>
+      </div>
+      <form id="kyc-form" onsubmit="return runDemo(event)">
+        <div id="rows-company">
+          <p class="rowhint">Юридична назва + код ЄДРПОУ</p>
+          <div class="rows">
+            <div class="qrow">
+              <input class="qn" type="text" placeholder="АТ КБ «ПриватБанк»" value="АТ КБ «ПриватБанк»">
+              <input class="qc" type="text" inputmode="numeric" placeholder="ЄДРПОУ" value="14360570">
+              <button type="button" class="qrm" onclick="rmRow(this)" title="Прибрати" disabled>×</button>
+            </div>
+          </div>
+        </div>
+        <div id="rows-person" style="display:none">
+          <p class="rowhint">ПІБ + РНОКПП (ІПН)</p>
+          <div class="rows">
+            <div class="qrow">
+              <input class="qn" type="text" placeholder="Іваненко Петро Васильович">
+              <input class="qc" type="text" inputmode="numeric" placeholder="РНОКПП">
+              <button type="button" class="qrm" onclick="rmRow(this)" title="Прибрати" disabled>×</button>
+            </div>
+          </div>
+        </div>
+        <button type="button" id="addrow" class="addrow" onclick="addRow()">+ Додати контрагента</button>
+        <button class="btn" type="submit">Перевірити (<span id="cnt">1</span>) →</button>
+      </form>
+      <div class="fanout">
+        <p class="tiny">З одного вводу система згенерує запити, напр.:</p>
+        <div id="fanout-list">
+          <span class="q"><b>ПриватБанк</b> санкції</span>
+          <span class="q"><b>ПриватБанк</b> суд</span>
+          <span class="q"><b>ПриватБанк</b> розслідування</span>
+          <span class="q"><b>PrivatBank</b> sanctions</span>
+          <span class="q"><b>PrivatBank</b> fraud</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="block" id="how">
+  <div class="wrap">
+    <div class="center">
+      <span class="eyebrow">PIPELINE</span>
+      <h2 class="title">Як це працює</h2>
+      <p>Чотири кроки від одного рядка вводу до готового звіту з доказовою базою.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><h3>Ввід та резолвінг</h3>
+        <p>Назва + ЄДРПОУ або ПІБ + РНОКПП. Система визначає тип суб'єкта й нормалізує дані.</p>
+        <span class="arrow">→</span></div>
+      <div class="step"><div class="n">2</div><h3>Fan-out пошуку</h3>
+        <p>Один ввід розгортається у 5–6 запитів за ризик-ключами та геофокусом на 3 мовах.</p>
+        <span class="arrow">→</span></div>
+      <div class="step"><div class="n">3</div><h3>Збір та AI-аналіз</h3>
+        <p>Реєстри, санкції, скрейпінг статей; Claude класифікує тотожність, тяжкість і категорію.</p>
+        <span class="arrow">→</span></div>
+      <div class="step"><div class="n">4</div><h3>Скоринг та звіт</h3>
+        <p>Інтегральний trust score 0–100, red flags, audit trail, граф зв'язків і evidence-архів.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="sources" style="background:#fff;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="wrap">
+    <div class="center">
+      <span class="eyebrow">ДЖЕРЕЛА</span>
+      <h2 class="title">Три незалежні шари перевірки</h2>
+      <p>Кожен шар чесно позначається статусом покриття — «перевірено» ≠ «чисто».</p>
+    </div>
+    <div class="sources">
+      <div class="src"><div class="ic">🏛️</div><h3>Державні реєстри</h3>
+        <p>Профіль компанії / ФОП, статус, керівник, бенефіціари, ознака PEP, регуляторна історія —
+           через Opendatabot (проксі офіційних держреєстрів України).</p>
+        <span class="tag">Opendatabot</span></div>
+      <div class="src"><div class="ic">🚫</div><h3>Санкційні переліки</h3>
+        <p>Звірка йде через Opendatabot, який агрегує національні та міжнародні переліки:
+           <strong>РНБО</strong>, <strong>OFAC</strong> (SDN / Non-SDN), <strong>ЄС</strong>,
+           <strong>Велика Британія</strong>, <strong>Канада</strong>.</p>
+        <span class="tag">Opendatabot · OFAC / ЄС / UK / РНБО</span></div>
+      <div class="src"><div class="ic">📰</div><h3>Негативні медіа</h3>
+        <p>Пошук + скрейпінг + AI-класифікація: тотожність особи, тяжкість, категорія, цитати.</p>
+        <span class="tag">Serper + Claude</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="example">
+  <div class="wrap">
+    <div class="center">
+      <span class="eyebrow">ПРИКЛАД</span>
+      <h2 class="title">Як виглядає готовий звіт</h2>
+      <p>Реальний звіт по АТ КБ «ПриватБанк» — з прозорим скорингом і посиланнями на першоджерела.</p>
+    </div>
+    <div class="example">
+      <div class="copy">
+        <h2>Підключено до нашого KYC-скіла</h2>
+        <p>Інструмент під'єднується до нашого KYC-скіла (Claude): скіл коригує ваги наявних
+           параметрів і виводить підсумкову оцінку ризику 0–100 за критеріями, встановленими
+           в самому скілі. Глобально — це робочий інструмент для аналітиків нашої команди.</p>
+        <ul>
+          <li><span class="check">✓</span> Оцінка ризику 0–100 за критеріями нашого KYC-скіла</li>
+          <li><span class="check">✓</span> Audit trail — як накопичувався ризик, крок за кроком</li>
+          <li><span class="check">✓</span> Санкції — видно, які переліки перевірено (OFAC, ЄС, РНБО…)</li>
+          <li><span class="check">✓</span> Negative media з severity-бейджами та лінками на першоджерела</li>
+        </ul>
+        <div class="btns">
+          <a class="btn" href="../examples/example_report.html" target="_blank">Відкрити звіт ↗</a>
+          <a class="btn ghost" href="../examples/example_report.json" target="_blank">JSON ↗</a>
+        </div>
+      </div>
+      <div class="shot">
+        <a href="../examples/example_report.html" target="_blank">
+          <img src="assets/report-preview.png" alt="Приклад KYC звіту — ПриватБанк">
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="limits" style="background:#fff;border-top:1px solid var(--border)">
+  <div class="wrap">
+    <div class="center">
+      <span class="eyebrow">ЧЕСНО</span>
+      <h2 class="title">Відомі обмеження</h2>
+      <p>Інструмент для аналітика, а не автоматичний вердикт. Ось де проходять його межі.</p>
+    </div>
+    <div class="limit">
+      <ul>
+        <li><span class="ic">🛡️</span><div><h3>Закриті реєстри</h3>
+          <p>Оборонні / військові підприємства та об'єкти критичної інфраструктури законно
+             приховані з відкритих держреєстрів — повну картину по них отримати неможливо.</p></div></li>
+        <li><span class="ic">⚖️</span><div><h3>Судова статистика ≠ ризик</h3>
+          <p>Тисячі справ у банку чи ритейлера — наслідок масштабу, а не маркер ризику.
+             Справу слід оцінювати за роллю сторони, предметом і масштабом.</p></div></li>
+        <li><span class="ic">🌍</span><div><h3>UA-центричність</h3>
+          <p>Покриття обмежене українськими реєстрами. Іноземний суб'єкт у реєстрі не
+             знайдеться — і це позначається як «не знайдено», а не як «чисто».</p></div></li>
+        <li><span class="ic">🔗</span><div><h3>Єдине реєстрове джерело</h3>
+          <p>Реєстрова й санкційна частини тримаються на Opendatabot; перехресної звірки
+             за другим незалежним джерелом поки немає.</p></div></li>
+        <li><span class="ic">🪪</span><div><h3>Тотожність особи</h3>
+          <p>Збіг за іменем не гарантує тотожності. match_confidence показує рівень
+             упевненості, але остаточна верифікація — за аналітиком.</p></div></li>
+        <li><span class="ic">🕒</span><div><h3>Часовий зріз</h3>
+          <p>Дані актуальні на момент генерації; реєстри й санкційні списки оновлюються
+             постійно — звіт потребує перепрогону для свіжого рішення.</p></div></li>
+      </ul>
+      <div class="disc">⚠️ <span><strong>KYC Network Scout — допоміжний інструмент.</strong>
+        Остаточне рішення про відносини з контрагентом приймає людина на основі цих даних
+        і власного професійного судження.</span></div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <div class="brand"><span class="logo">🛡️</span>
+    <span>KYC Network Scout<small>Автоматизований OSINT pipeline</small></span></div>
+  <div>Opendatabot · Serper · Claude · Celery · Redis · Docker</div>
+</div></footer>
+
+<script>
+  var MAX_ROWS = 5;
+  function isCompany(){ return document.getElementById('tab-company').classList.contains('active'); }
+  function activeRows(){ return document.querySelector((isCompany()?'#rows-company':'#rows-person')+' .rows'); }
+
+  function updateCount(){
+    // кнопку «прибрати» вимикаємо, коли в групі лишився один рядок
+    var groups = document.querySelectorAll('#rows-company .rows, #rows-person .rows');
+    Array.prototype.forEach.call(groups, function(rs){
+      var rows = rs.querySelectorAll('.qrow');
+      Array.prototype.forEach.call(rows, function(r){ r.querySelector('.qrm').disabled = rows.length <= 1; });
+    });
+    var n = activeRows().querySelectorAll('.qrow').length;
+    document.getElementById('cnt').textContent = n;
+    document.getElementById('addrow').disabled = n >= MAX_ROWS;
+  }
+
+  function setMode(mode){
+    var isC = mode === 'company';
+    document.getElementById('rows-company').style.display = isC ? '' : 'none';
+    document.getElementById('rows-person').style.display = isC ? 'none' : '';
+    document.getElementById('tab-company').classList.toggle('active', isC);
+    document.getElementById('tab-person').classList.toggle('active', !isC);
+    updateCount(); rebuildFanout();
+  }
+
+  function addRow(){
+    var rs = activeRows();
+    if(rs.querySelectorAll('.qrow').length >= MAX_ROWS) return;
+    var isC = isCompany();
+    var div = document.createElement('div'); div.className = 'qrow';
+    div.innerHTML =
+      '<input class="qn" type="text" placeholder="'+(isC?'Юридична назва':'ПІБ')+'">'+
+      '<input class="qc" type="text" inputmode="numeric" placeholder="'+(isC?'ЄДРПОУ':'РНОКПП')+'">'+
+      '<button type="button" class="qrm" onclick="rmRow(this)" title="Прибрати">×</button>';
+    rs.appendChild(div); updateCount();
+    div.querySelector('.qn').focus();
+  }
+
+  function rmRow(btn){
+    var row = btn.closest('.qrow'); var rs = row.parentNode;
+    if(rs.querySelectorAll('.qrow').length <= 1) return;
+    row.remove(); updateCount(); rebuildFanout();
+  }
+
+  function brand(name){
+    if(!name) return '';
+    var m = name.match(/[«"]([^»"]+)[»"]/);
+    if(m) return m[1];
+    var w = name.replace(/(АТ|ТОВ|ПАТ|КБ|ПрАТ|ФОП)\s*/gi,'').trim().split(/\s+/);
+    return w[0] || name;
+  }
+
+  function rebuildFanout(){
+    var first = activeRows().querySelector('.qn');
+    var b = brand(first ? first.value : '') || (isCompany() ? 'компанія' : 'особа');
+    var risks = ['санкції','суд','розслідування'];
+    var html = risks.map(function(r){return '<span class="q"><b>'+b+'</b> '+r+'</span>';}).join('');
+    if(isCompany()) html += '<span class="q"><b>'+b+'</b> відмивання</span><span class="q"><b>'+b+'</b> investigation</span>';
+    else html += '<span class="q"><b>'+b+'</b> кримінал</span>';
+    document.getElementById('fanout-list').innerHTML = html;
+  }
+
+  // зчитує всіх заповнених контрагентів з активної вкладки (для веб-режиму)
+  function collectSubjects(){
+    var type = isCompany() ? 'company' : 'person';
+    var out = [];
+    Array.prototype.forEach.call(activeRows().querySelectorAll('.qrow'), function(r){
+      var name = r.querySelector('.qn').value.trim();
+      var code = r.querySelector('.qc').value.trim();
+      if(name || code) out.push({type:type, name:name, code:code});
+    });
+    return out;
+  }
+
+  document.getElementById('kyc-form').addEventListener('input', function(e){
+    if(e.target.classList && e.target.classList.contains('qn')) rebuildFanout();
+  });
+
+  function runDemo(e){
+    if(e && e.preventDefault) e.preventDefault();
+    // Демо: відкриваємо приклад готового звіту (у веб-режимі цей обробник
+    // перевизначається на реальну батч-перевірку).
+    window.open('../examples/example_report.html','_blank');
+    return false;
+  }
+
+  updateCount();
+</script>
+</body></html>

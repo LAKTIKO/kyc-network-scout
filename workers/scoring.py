@@ -416,7 +416,8 @@ def compute_trust_score(
     else:
         risk = "HIGH"
 
-    level_reason = f"Бал {score} → {risk} за порогами (LOW≥70, MEDIUM≥40)"
+    level_reason = (f"Оцінка ризику {100 - score}/100 → {risk} "
+                    f"(LOW ≤30 · MEDIUM ≤60 · HIGH >60)")
 
     # Ескалація до HIGH.
     if (sanctions and sanctions.get("has_sanctions_match")) or registry_critical:

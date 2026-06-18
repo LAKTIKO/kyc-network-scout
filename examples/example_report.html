@@ -1,103 +1,269 @@
 <!DOCTYPE html>
 <html lang="uk"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KYC звіт — АКЦІОНЕРНЕ ТОВАРИСТВО КОМЕРЦІЙНИЙ БАНК "ПРИВАТБАНК"</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;
-       max-width:900px;margin:40px auto;padding:0 24px}
-  h1{font-size:24px;border-bottom:2px solid #333;padding-bottom:8px}
-  h2{font-size:18px;margin-top:28px}
-  .risk{display:inline-block;padding:6px 16px;border-radius:6px;font-weight:700;
-        color:#fff;font-size:18px}
-  .risk.LOW{background:#2e7d32}.risk.MEDIUM{background:#ed6c02}
-  .risk.HIGH{background:#c62828}.risk.INCONCLUSIVE{background:#607d8b}
-  .score{font-size:40px;font-weight:800}
-  .flag{background:#fff3e0;border-left:4px solid #ed6c02;padding:8px 12px;margin:6px 0}
-  table{border-collapse:collapse;width:100%;margin:12px 0}
-  th,td{border:1px solid #ddd;padding:8px 10px;text-align:left;font-size:14px}
-  th{background:#f5f5f5}
-  .muted{color:#777;font-size:13px}
-  .disclaimer{background:#e3f2fd;border:1px solid #2196f3;padding:10px 14px;
-              border-radius:4px;margin:12px 0;font-size:13px}
-  .cov-checked{color:#2e7d32}.cov-not_found{color:#c62828}
-  .cov-skipped,.cov-unavailable_via_api,.cov-error{color:#999}
-  .review{color:#ed6c02;font-weight:600}
-  .trail{font-size:13px}.trail td{padding:4px 8px}
-  .neg{color:#c62828}
+  :root{
+    --font:'Onest',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --bg:#f1f5f9; --surface:#ffffff; --ink:#0f172a; --ink-soft:#475569;
+    --muted:#94a3b8; --border:#e2e8f0; --border-soft:#eef2f6;
+    --brand:#1d4ed8; --brand-deep:#0b1220; --brand-soft:#eff6ff;
+    --low:#16a34a; --low-bg:#ecfdf5; --medium:#d97706; --medium-bg:#fffbeb;
+    --high:#dc2626; --high-bg:#fef2f2; --inconclusive:#64748b; --inconc-bg:#f1f5f9;
+    --radius:14px; --shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box}
+  body{font-family:var(--font);
+       color:var(--ink);background:var(--bg);margin:0;
+       font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:0 20px 64px}
+  a{color:var(--brand);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .muted{color:var(--ink-soft);font-size:13px}
+  .tiny{font-size:12px;color:var(--muted)}
+
+  /* ── Topbar ── */
+  .topbar{background:var(--brand-deep);color:#fff;padding:18px 0;margin-bottom:28px}
+  .topbar .wrap{padding-bottom:0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700;letter-spacing:.2px}
+  .brand .logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+       display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 auto}
+  .brand small{display:block;font-weight:500;color:#93a4c4;font-size:11px;letter-spacing:.3px}
+  .topbar .meta{text-align:right;font-size:12px;color:#93a4c4;line-height:1.4}
+
+  /* ── Hero / score card ── */
+  .hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+        box-shadow:var(--shadow);padding:26px 28px;margin-bottom:22px;
+        display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+  .hero .left{flex:1 1 320px;min-width:260px}
+  .hero h1{font-size:23px;margin:0 0 4px;font-weight:700;line-height:1.25}
+  .subtype{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;
+        letter-spacing:.6px;color:var(--brand);background:var(--brand-soft);
+        padding:3px 9px;border-radius:999px;margin-bottom:10px}
+  .hero .reason{color:var(--ink-soft);font-size:14px;margin:8px 0 0}
+  .gauge{flex:0 0 auto;text-align:center;min-width:190px}
+  .score{font-size:54px;font-weight:800;line-height:1;letter-spacing:-1px}
+  .score span{font-size:20px;color:var(--muted);font-weight:600}
+  .risk{display:inline-block;padding:7px 18px;border-radius:999px;font-weight:700;
+        color:#fff;font-size:14px;letter-spacing:.4px;margin-top:12px}
+  .risk.LOW{background:var(--low)}.risk.MEDIUM{background:var(--medium)}
+  .risk.HIGH{background:var(--high)}.risk.INCONCLUSIVE{background:var(--inconclusive)}
+  .bar{height:9px;border-radius:999px;background:var(--border);margin-top:16px;overflow:hidden}
+  .bar > i{display:block;height:100%;border-radius:999px;background:var(--inconclusive)}
+  .bar.LOW > i{background:var(--low)}
+  .bar.MEDIUM > i{background:var(--medium)}
+  .bar.HIGH > i{background:var(--high)}
+  .bar.INCONCLUSIVE > i{background:var(--inconclusive)}
+  .scalelbl{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:5px}
+
+  /* ── Cards / sections ── */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+        box-shadow:var(--shadow);padding:20px 24px;margin-bottom:18px}
+  h2{font-size:16px;margin:0 0 14px;font-weight:700;display:flex;align-items:center;gap:9px}
+  h2::before{content:"";width:4px;height:18px;border-radius:3px;background:var(--brand);flex:0 0 auto}
+
+  /* ── Callouts ── */
+  .callout{border-radius:10px;padding:13px 16px;margin:0 0 14px;font-size:13.5px;
+        border:1px solid transparent;display:flex;gap:10px;align-items:flex-start}
+  .callout .ic{flex:0 0 auto;font-size:15px;line-height:1.4}
+  .callout-info{background:var(--brand-soft);border-color:#bfdbfe;color:#1e3a8a}
+  .callout-warn{background:var(--medium-bg);border-color:#fde68a;color:#92400e}
+  .callout-danger{background:var(--high-bg);border-color:#fecaca;color:#991b1b}
+  .callout-ok{background:var(--low-bg);border-color:#bbf7d0;color:#166534}
+
+  /* ── Flags (ієрархія: critical / warning / context) ── */
+  .flags{display:grid;gap:9px}
+  .flagx{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border-radius:10px;
+        border:1px solid var(--border);background:var(--surface)}
+  .flagx .tag{flex:0 0 auto;font-size:10px;font-weight:800;text-transform:uppercase;
+        letter-spacing:.5px;padding:4px 9px;border-radius:6px;margin-top:1px;white-space:nowrap}
+  .flagx .txt{font-size:13.5px;color:var(--ink);line-height:1.5}
+  .flag-high{border-left:4px solid var(--high);background:#fef6f6}
+  .flag-high .tag{background:#fee2e2;color:#991b1b}
+  .flag-med{border-left:4px solid var(--medium);background:#fffdf6}
+  .flag-med .tag{background:#fef3c7;color:#92400e}
+  .flag-info{border-left:4px solid var(--muted);background:#fafbfc}
+  .flag-info .tag{background:#eef2f6;color:#64748b}
+  .flag-info .txt{color:var(--ink-soft)}
+
+  /* ── Tables ── */
+  table{border-collapse:collapse;width:100%;margin:4px 0;font-size:13.5px}
+  th,td{padding:9px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border-soft)}
+  thead th,table.kv th{color:var(--ink-soft);font-weight:600;font-size:12px;
+        text-transform:uppercase;letter-spacing:.4px;background:#f8fafc}
+  tbody tr:last-child td{border-bottom:none}
+  table.kv th{width:200px;background:#f8fafc;text-transform:none;letter-spacing:0;font-size:13px}
+  .trail td,.trail th{padding:6px 12px;font-size:12.5px}
+  .neg{color:var(--high);font-weight:600}.pos{color:var(--low);font-weight:600}
+
+  /* ── Badges ── */
+  .badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;
+        font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+  .sev-critical{background:#fee2e2;color:#991b1b}.sev-high{background:#ffedd5;color:#9a3412}
+  .sev-medium{background:#fef9c3;color:#854d0e}.sev-low{background:#e0f2fe;color:#075985}
+  .cat{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:600;
+        background:#f1f5f9;color:#475569}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:999px;
+        font-size:12px;font-weight:600}
+  .pill::before{content:"";width:7px;height:7px;border-radius:50%}
+  .cov-checked{background:var(--low-bg);color:#166534}.cov-checked::before{background:var(--low)}
+  .cov-not_found{background:var(--high-bg);color:#991b1b}.cov-not_found::before{background:var(--high)}
+  .cov-skipped,.cov-unavailable_via_api,.cov-error,.cov-unavailable{
+        background:var(--inconc-bg);color:#475569}
+  .cov-skipped::before,.cov-unavailable_via_api::before,.cov-error::before,
+  .cov-unavailable::before{background:var(--muted)}
+  .review{color:var(--medium);font-weight:600}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:30px;
+        padding-top:18px;border-top:1px solid var(--border)}
+
+  @media print{
+    body{background:#fff;font-size:12px}
+    .topbar{background:var(--brand-deep)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .card,.hero{box-shadow:none;break-inside:avoid}
+    .badge,.pill,.risk{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
 </style></head><body>
-  <h1>KYC Due Diligence — АКЦІОНЕРНЕ ТОВАРИСТВО КОМЕРЦІЙНИЙ БАНК "ПРИВАТБАНК"</h1>
-  <p class="muted">Згенеровано: 2026-06-18T15:24:31.483739+00:00 · KYC Network Scout
-     · тип: company</p>
+  <div class="topbar"><div class="wrap">
+    <div class="brand"><span class="logo">🛡️</span>
+      <span>KYC Network Scout<small>OSINT Due-Diligence Engine</small></span></div>
+    <div class="meta">Звіт згенеровано<br>18.06.2026 20:00 UTC</div>
+  </div></div>
 
-  <div><span class="score">51/100</span> &nbsp;
-       <span class="risk MEDIUM">MEDIUM RISK</span></div>
+  <div class="wrap">
 
-  <p class="muted">Бал 51 → MEDIUM за порогами (LOW≥70, MEDIUM≥40)</p>
+  
+  <div class="hero">
+    <div class="left">
+      <span class="subtype">Компанія</span>
+      <h1>АКЦІОНЕРНЕ ТОВАРИСТВО КОМЕРЦІЙНИЙ БАНК "ПРИВАТБАНК"</h1>
+      <p class="reason">Оцінка ризику 53/100 → MEDIUM (LOW ≤30 · MEDIUM ≤60 · HIGH >60)</p>
+      <div class="bar MEDIUM"><i style="width:53%"></i></div>
+      <div class="scalelbl"><span>0 — мінімальний ризик</span><span>100 — максимальний</span></div>
+    </div>
+    <div class="gauge">
+      <div class="score">53<span>/100</span></div>
+      <span class="risk MEDIUM">MEDIUM RISK</span>
+      <p class="tiny" style="margin:8px 0 0">Оцінка ризику</p>
+    </div>
+  </div>
 
-  <div class="disclaimer">ℹ Цей звіт — <strong>допоміжний інструмент аналітика</strong>,
-     а не автоматичний вердикт. Остаточне KYC-рішення приймає людина на
-     основі цих даних та власного судження.</div>
+  <div class="callout callout-info"><span class="ic">ℹ️</span>
+    <span>Цей звіт — <strong>допоміжний інструмент аналітика</strong>, а не автоматичний
+    вердикт. Остаточне KYC-рішення приймає людина на основі цих даних і власного судження.</span></div>
 
+  
+
+  <div class="card">
   <h2>Покриття джерел</h2>
-  <table><tr><th>Джерело</th><th>Статус</th></tr>
-  
-    <tr><td>registry</td><td class="cov-checked">checked</td></tr>
-  
-    <tr><td>sanctions</td><td class="cov-checked">checked</td></tr>
-  
-    <tr><td>adverse_media</td><td class="cov-checked">checked</td></tr>
-  
-  </table>
-  <p class="muted">«checked» — перевірено; «not_found» — суб'єкт не знайдено
-     в джерелі (НЕ означає «чисто»); «skipped/unavailable» — не перевірялось.</p>
+  <p><span class="pill cov-checked" style="margin:0 6px 6px 0">registry: checked</span><span class="pill cov-checked" style="margin:0 6px 6px 0">sanctions: checked</span><span class="pill cov-checked" style="margin:0 6px 6px 0">adverse_media: checked</span></p>
+  <p class="tiny" style="margin:8px 0 0">«checked» — перевірено · «not_found» — суб'єкта не знайдено
+     в джерелі (НЕ «чисто») · «skipped / unavailable» — не перевірялось.</p>
+  </div>
 
+  <div class="card">
   
   <h2>🚩 Red flags</h2>
-  <div class="flag">Негативні згадки у медіа: low×1, medium×1</div><div class="flag">Регуляторні стягнення (адмін. штрафи/застереження, не санкційний список): 2024-12-06, 10,000,000 грн: за порушення законодавства у сфері запобігання та протидії л; 2024-10-24, 1,700,000 грн: порушення законодавства, що регулює діяльність платіжних сис; 2025-03-07: неналежного виконання банком обов’язку щодо здійснення належ; 2024-12-06: за порушення законодавства у сфері запобігання та протидії л</div><div class="flag">PEP-зв'язок: Публічний декларант серед власників (Садова Лілія Василівна)</div><div class="flag">Реєстр: Податковий борг на 01.01.2022 — 27 674.22 грн</div><div class="flag">Реєстр: Судовий реєстр — 1116540 рішень</div><div class="flag">Реєстр: Виконавчі провадження — 92</div><div class="flag">Реєстр: Судові процеси компанії</div>
+  <p class="tiny" style="margin:-6px 0 12px">Згруповано за вагою: <span class="neg">критичні</span> —
+     потребують уваги; <span style="color:var(--medium)">застереження</span> — врахувати в рішенні;
+     контекст — масштабні/довідкові факти (для великих оргструктур часто це норма, а не ризик).</p>
+  <div class="flags">
   
+    
+    
+      
+    
+    <div class="flagx flag-med"><span class="tag">застереження</span><span class="txt">Негативні згадки у медіа: low×2, medium×1</span></div>
+  
+    
+    
+      
+    
+    <div class="flagx flag-high"><span class="tag">критично</span><span class="txt">Регуляторні стягнення (адмін. штрафи/застереження, не санкційний список): 2024-12-06, 10,000,000 грн: за порушення законодавства у сфері запобігання та протидії л; 2024-10-24, 1,700,000 грн: порушення законодавства, що регулює діяльність платіжних сис; 2025-03-07: неналежного виконання банком обов’язку щодо здійснення належ; 2024-12-06: за порушення законодавства у сфері запобігання та протидії л</span></div>
+  
+    
+    
+      
+    
+    <div class="flagx flag-med"><span class="tag">застереження</span><span class="txt">PEP-зв'язок: Публічний декларант серед власників (Садова Лілія Василівна)</span></div>
+  
+    
+    
+      
+    
+    <div class="flagx flag-info"><span class="tag">контекст</span><span class="txt">Реєстр: Податковий борг на 01.01.2022 — 27 674.22 грн</span></div>
+  
+    
+    
+      
+    
+    <div class="flagx flag-info"><span class="tag">контекст</span><span class="txt">Реєстр: Судовий реєстр — 1117475 рішень</span></div>
+  
+    
+    
+      
+    
+    <div class="flagx flag-info"><span class="tag">контекст</span><span class="txt">Реєстр: Виконавчі провадження — 91</span></div>
+  
+    
+    
+      
+    
+    <div class="flagx flag-info"><span class="tag">контекст</span><span class="txt">Реєстр: Судові процеси компанії</span></div>
+  
+  </div>
+  
+  </div>
 
-  <h2>Розклад балів (audit trail)</h2>
-  <p class="muted">Як сформувався бал 51/100 — крок за кроком,
-     із зазначенням джерела кожного фактора (для відтворюваності рішення).</p>
-  <table class="trail"><tr><th>Крок</th><th>Δ</th><th>Бал</th><th>Джерело</th></tr>
+  <div class="card">
+  <h2>Як накопичувався ризик (audit trail)</h2>
+  <p class="muted" style="margin-top:-4px">Як сформувалась оцінка ризику 53/100 — крок за кроком,
+     із зазначенням джерела кожного фактора (для відтворюваності рішення).
+     Старт — 0 (презумпція доброчесності), кожен фактор додає ризик.</p>
+  <table class="trail"><thead><tr><th>Крок / фактор</th><th>+ Ризик</th><th>Ризик</th><th>Джерело</th></tr></thead><tbody>
   
-    <tr><td>Початковий бал (презумпція надійності)</td>
+    <tr><td>Базовий рівень (презумпція доброчесності)</td>
         <td class="">—</td>
-        <td>100</td><td>—</td></tr>
+        <td><strong>0</strong></td><td class="muted">—</td></tr>
   
     <tr><td>Негативні медіа-згадки</td>
-        <td class="neg">-16</td>
-        <td>84</td><td>adverse_media</td></tr>
+        <td class="neg">+20</td>
+        <td><strong>20</strong></td><td class="muted">adverse_media</td></tr>
   
     <tr><td>Регуляторна історія: 4 стягнення (НБУ/АМКУ)</td>
-        <td class="neg">-13</td>
-        <td>71</td><td>registry (regulatory)</td></tr>
+        <td class="neg">+13</td>
+        <td><strong>33</strong></td><td class="muted">registry (regulatory)</td></tr>
   
     <tr><td>PEP-зв'язок: Публічний декларант серед власників</td>
         <td class="">—</td>
-        <td>71</td><td>registry (PEP)</td></tr>
+        <td><strong>33</strong></td><td class="muted">registry (PEP)</td></tr>
   
     <tr><td>Реєстр: Податковий борг на 01.01.2022 — 27 674.22 грн</td>
-        <td class="neg">-5</td>
-        <td>66</td><td>registry (factors)</td></tr>
+        <td class="neg">+5</td>
+        <td><strong>38</strong></td><td class="muted">registry (factors)</td></tr>
   
-    <tr><td>Реєстр: Судовий реєстр — 1116540 рішень</td>
-        <td class="neg">-5</td>
-        <td>61</td><td>registry (factors)</td></tr>
+    <tr><td>Реєстр: Судовий реєстр — 1117475 рішень</td>
+        <td class="neg">+5</td>
+        <td><strong>43</strong></td><td class="muted">registry (factors)</td></tr>
   
-    <tr><td>Реєстр: Виконавчі провадження — 92</td>
-        <td class="neg">-5</td>
-        <td>56</td><td>registry (factors)</td></tr>
+    <tr><td>Реєстр: Виконавчі провадження — 91</td>
+        <td class="neg">+5</td>
+        <td><strong>48</strong></td><td class="muted">registry (factors)</td></tr>
   
     <tr><td>Реєстр: Судові процеси компанії</td>
-        <td class="neg">-5</td>
-        <td>51</td><td>registry (factors)</td></tr>
+        <td class="neg">+5</td>
+        <td><strong>53</strong></td><td class="muted">registry (factors)</td></tr>
   
-  </table>
-  <p class="muted"><strong>Підсумок:</strong> Бал 51 → MEDIUM за порогами (LOW≥70, MEDIUM≥40)</p>
+  </tbody></table>
+  </div>
 
+  <div class="card">
   <h2>Дані суб'єкта</h2>
   
-  <table>
+  <table class="kv">
     <tr><th>Назва / ПІБ</th><td>АКЦІОНЕРНЕ ТОВАРИСТВО КОМЕРЦІЙНИЙ БАНК "ПРИВАТБАНК"</td></tr>
     <tr><th>ЄДРПОУ</th><td>14360570</td></tr>
     
@@ -107,51 +273,109 @@
     <tr><th>Керівник</th><td>Бьоркнерт Карл Мікаель</td></tr>
     
     <tr><th>Остання зміна в реєстрі</th><td>2026-06-09 17:15:01</td></tr>
-    <tr><th>Джерело</th><td><a href="https://opendatabot.ua/c/14360570" target="_blank" rel="noopener">Opendatabot · профіль компанії</a></td></tr>
+    <tr><th>Джерело</th><td><a href="https://opendatabot.ua/c/14360570" target="_blank" rel="noopener">Opendatabot · профіль компанії ↗</a></td></tr>
     
   </table>
   
+  </div>
 
+  <div class="card">
   <h2>Санкційний скринінг</h2>
   
-    <p>✓ Збігів не виявлено. Перевірені списки:
-       реєстрові санкційні factors (Opendatabot).</p>
+    
+    <div class="callout callout-ok" style="margin:0 0 14px"><span class="ic">✅</span>
+      <span>Збігів у перевірених санкційних списках не виявлено.</span></div>
+    
+    
+    <p class="tiny" style="margin:0 0 7px">Перевірені списки (1):</p>
+    <p style="margin:0">
+      <span class="cat" style="margin:0 5px 6px 0">реєстрові санкційні factors (Opendatabot)</span>
+    </p>
+    
+    <p class="tiny" style="margin:12px 0 0">Джерело:
+      <a href="https://opendatabot.ua/c/14360570" target="_blank" rel="noopener">Opendatabot · профіль і санкційні фактори ↗</a>
+      
+      — агрегує переліки <strong>РНБО</strong>, <strong>OFAC</strong> (SDN / Non-SDN),
+      <strong>ЄС</strong>, <strong>Велика Британія</strong>, <strong>Канада</strong>.</p>
   
+  </div>
 
   
+  <div class="card">
   <h2>Корпоративна структура / пов'язані особи</h2>
-  <table><tr><th>Ім'я</th><th>Роль</th><th>Код</th><th>Джерела</th><th>Статус</th></tr>
+  <table><thead><tr><th>Ім'я</th><th>Роль</th><th>Код</th><th>Джерела</th><th>Статус</th></tr></thead><tbody>
   
     <tr><td>АКЦІОНЕРНЕ ТОВАРИСТВО КОМЕРЦІЙНИЙ БАНК "ПРИВАТБАНК"</td><td>subject</td>
-        <td>14360570</td><td>registry</td>
-        <td>✓</td></tr>
+        <td>14360570</td><td class="muted">registry</td>
+        <td><span class="pos">✓</span></td></tr>
   
     <tr><td>Бьоркнерт Карл Мікаель</td><td>director</td>
-        <td>—</td><td>registry</td>
-        <td>✓</td></tr>
+        <td>—</td><td class="muted">registry</td>
+        <td><span class="pos">✓</span></td></tr>
   
     <tr><td>ЄДИНИМ АКЦІОНЕРОМ БАНКУ, ЯКОМУ НАЛЕЖИТЬ 100% АКЦІЙ БАНКУ, Є ДЕРЖАВА</td><td>засновник</td>
-        <td>—</td><td>registry</td>
-        <td>✓</td></tr>
-  </table>
-  <p><a href="graph.html">↗ Інтерактивний граф зв'язків</a></p>
+        <td>—</td><td class="muted">registry</td>
+        <td><span class="pos">✓</span></td></tr>
+  </tbody></table>
+  <p style="margin:14px 0 0"><a href="graph.html">↗ Інтерактивний граф зв'язків</a></p>
+  </div>
   
 
   
-  <h2>Негативні медіа-згадки</h2>
-  <table><tr><th>Severity</th><th>Категорія</th><th>Резюме</th><th>Джерело</th></tr>
+  <div class="card">
+  <h2>Негативні медіа-згадки <span class="cat" style="margin-left:auto">3</span></h2>
   
-    <tr><td>medium</td><td>other</td><td>Стаття містить численні негативні відгуки клієнтів про ПриватБанк, зокрема скарги на безпідставне блокування рахунків, неналежне обслуговування та вимоги фінансового моніторингу без правового обґрунтування. Також зазначено, що банк у 2016 році перейшов у державну власність через невиконання програми докапіталізації та від'ємне значення капіталу.</td>
-        <td><a href="https://finance.ua/ua/banks/privatbank" target="_blank" rel="noopener">ПриватБанк - сайт, телефон, реквізити, МФО, ЄДРПОУ, контактна інформація</a></td></tr>
+  <table><thead><tr><th style="width:90px">Severity</th><th>Категорія</th><th>Резюме</th><th>Джерело</th></tr></thead><tbody>
   
-    <tr><td>low</td><td>litigation</td><td>Господарський суд Київської області повернув позовну заяву без розгляду через процесуальні порушення з боку ПАТ КБ 'ПРИВАТБАНК', який діяв як представник ПАТ 'АКЦЕНТ-БАНК': позов підписаний неуповноваженою особою та не надано належних доказів сплати судового збору.</td>
+    <tr><td><span class="badge sev-low">low</span></td>
+        <td><span class="cat">litigation</span></td>
+        <td>Дарницький районний суд м. Києва задовольнив позов споживача проти АТ КБ «ПриватБанк» щодо стягнення безпідставно списаних коштів у сумі 5000 грн та відновлення залишку на рахунку на суму 113 309 грн 64 коп. після несанкціонованих операцій. Суд зобов'язав банк також сплатити судовий збір у розмірі 2422 грн 40 коп. на користь держави.</td>
+        <td><a href="https://reyestr.court.gov.ua/Review/133280226" target="_blank" rel="noopener">Єдиний державний реєстр судових рішень ↗</a></td></tr>
+  
+    <tr><td><span class="badge sev-medium">medium</span></td>
+        <td><span class="cat">other</span></td>
+        <td>Стаття містить численні негативні відгуки клієнтів про ПриватБанк, зокрема скарги на безпідставне блокування рахунків, неналежне обслуговування та вимоги фінансового моніторингу без правового обґрунтування. Також зазначено, що банк у 2016 році перейшов у державну власність через невиконання програми докапіталізації та від'ємне значення капіталу.</td>
+        <td><a href="https://finance.ua/ua/banks/privatbank" target="_blank" rel="noopener">ПриватБанк - сайт, телефон, реквізити, МФО, ЄДРПОУ, контактна інформація ↗</a></td></tr>
+  
+    <tr><td><span class="badge sev-low">low</span></td>
+        <td><span class="cat">litigation</span></td>
+        <td>Господарський суд Київської області повернув позовну заяву без розгляду через процесуальні порушення з боку ПАТ КБ 'ПРИВАТБАНК', який діяв як представник ПАТ 'АКЦЕНТ-БАНК': позов підписаний неуповноваженою особою та не надано належних доказів сплати судового збору.</td>
         <td><a href="https://zakononline.ua/court-decisions/show/42012854" target="_blank" rel="noopener">Ухвала суду від 22.12.2014 по справі № 911/5439/14 Господарський суд Київської області 
-             | ZAKONONLINE - Право знати!</a></td></tr>
-  </table>
-  <p class="muted">Посилання ведуть на першоджерела (відкриваються в новій
-     вкладці). Повні копії статей на момент перевірки збережено в evidence-архіві.</p>
+             | ZAKONONLINE - Право знати! ↗</a></td></tr>
+  </tbody></table>
+  <p class="tiny" style="margin-top:10px">Посилання ведуть на першоджерела (нова вкладка).
+     Повні копії статей на момент перевірки збережено в evidence-архіві.</p>
   
+  </div>
 
-  <p class="muted">Усі первинні джерела збережено в evidence-архіві прогону.
-     KYC Network Scout — автоматизований OSINT pipeline.</p>
+  <div class="card">
+  <h2>Відомі обмеження</h2>
+  <ul style="margin:0;padding-left:20px;font-size:13.5px;color:var(--ink-soft);line-height:1.7">
+    <li><strong>Закриті реєстри.</strong> Оборонні / військові підприємства та об'єкти
+        критичної інфраструктури законно приховані з відкритих держреєстрів — повну
+        реєстрову картину по них отримати неможливо.</li>
+    <li><strong>UA-центричність.</strong> Покриття обмежене українськими реєстрами.
+        Іноземний суб'єкт (Кіпр, Естонія тощо) у реєстрі не знайдеться — і це позначається
+        як «не знайдено», а <u>не</u> як «чисто».</li>
+    <li><strong>Єдине реєстрове джерело.</strong> Реєстрова й санкційна частини тримаються
+        на Opendatabot; перехресної звірки за другим незалежним джерелом поки немає.</li>
+    <li><strong>Судова статистика ≠ ризик.</strong> Велика кількість судових справ у
+        великих організацій (банки, ритейл) — наслідок масштабу, а не маркер ризику
+        сам по собі. Кожну справу слід оцінювати за роллю сторони, предметом і масштабом.</li>
+    <li><strong>Якість adverse media.</strong> Залежить від пошукової видачі та
+        класифікатора — можливі як хибнопозитивні, так і пропущені згадки.
+        Класифікатор відсіює однофамільців, але остаточна верифікація — за аналітиком.</li>
+    <li><strong>Тотожність особи.</strong> Збіг за іменем не гарантує тотожності;
+        match_confidence показує рівень упевненості. За відсутності РНОКПП/дати народження
+        система не дає «чисто» (статус INCONCLUSIVE).</li>
+    <li><strong>Часовий зріз.</strong> Дані актуальні на момент генерації звіту
+        (18.06.2026 20:00 UTC); реєстри й санкційні списки оновлюються постійно.</li>
+  </ul>
+  </div>
+
+  <footer>
+    Усі первинні джерела збережено в evidence-архіві прогону.<br>
+    <strong>KYC Network Scout</strong> — автоматизований OSINT pipeline · Opendatabot · Serper · Claude
+  </footer>
+  </div>
 </body></html>
